@@ -16,6 +16,9 @@ Imports:
     kernlab,
     optimx,
     rgenoud
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
 License: GPL (>= 2)
 URL: https://web.stanford.edu/~jhain/
 Encoding: UTF-8
