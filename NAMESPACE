@@ -1,0 +1,11 @@
+import(kernlab)
+import(optimx)
+import(rgenoud)
+importFrom("graphics", "abline", "legend", "lines")
+importFrom("stats", "sd", "var")
+export(synth, dataprep, gaps.plot, path.plot, synth.tab, fn.V, spec.pred.func, collect.optimx)
+
+
+
+
+

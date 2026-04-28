@@ -1,0 +1,30 @@
+# R CMD check artifacts
+*.Rcheck/
+
+# R session
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+
+# macOS
+.DS_Store
+Icon?
+
+# Editor
+*.swp
+.vscode/
+.idea/
+
+# Build artifacts
+Synth_*.tar.gz
+!dev/Synth_1.1-8_baseline.tar.gz
+!dev/Synth_1.1-9_baseline.tar.gz
+
+# revdepcheck working state
+revdep/library.noindex/
+revdep/checks.noindex/
+revdep/data.sqlite
+revdep/*.fail
+revdep/*.full
+dev/revdep_run.log
