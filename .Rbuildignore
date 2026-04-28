@@ -1,6 +1,7 @@
 ^dev$
 ^revdep$
 ^cran-comments\.md$
+^CRAN-SUBMISSION$
 ^\.git$
 ^\.gitignore$
 ^\.Rbuildignore$
