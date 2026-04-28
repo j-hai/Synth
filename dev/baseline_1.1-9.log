@@ -1,0 +1,31 @@
+Synth version: 1.1.9
+R version:     R version 4.5.3 (2026-03-11)
+captured at:   2026-04-28 15:54:51 UTC
+RDS:           /Users/jhainmueller/Documents/GitHub/Synth/dev/baseline_1.1-9.rds
+scenarios:     3 (s1_toy_panel, s2_custom_v, s3_matrix_interface)
+
+--- sessionInfo ---
+R version 4.5.3 (2026-03-11)
+Platform: aarch64-apple-darwin20
+Running under: macOS Tahoe 26.3.1
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] Synth_1.1-9
+
+loaded via a namespace (and not attached):
+[1] compiler_4.5.3      rgenoud_5.9-0.11    tools_4.5.3        
+[4] nloptr_2.2.1        optimx_2025-4.9     numDeriv_2016.8-1.1
+[7] kernlab_0.9-33      pracma_2.4.6       
