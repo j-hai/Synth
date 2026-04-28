@@ -1,6 +1,6 @@
 Package: Synth
-Version: 1.1-9
-Date: 2025-09-18
+Version: 1.1-10
+Date: 2026-04-28
 Title: Synthetic Control Group Method for Comparative Case Studies
 Authors@R: c(person(given = 'Jens', family = 'Hainmueller', role = c('aut','cre'), email = 'jhain@stanford.edu'), person(given = 'Alexis', family = 'Diamond', role = 'aut'))
 Description: Implements the synthetic control group method for comparative case studies

@@ -34,19 +34,18 @@ function(
                         } 
                      
                      
-                     y0plot1 <- dataprep.res$Y0plot %*% synth.res$solution.w                
-                                       
-                     # Get Ylim right 
-                     if(sum(is.na(Ylim))>0)
-                      {
-                        Y.max <-  max(c(y0plot1,dataprep.res$Y1plot))
-                        Y.min <-  min(c(y0plot1,dataprep.res$Y1plot))
-                     
-                        Ylim <- c(
-                                   (Y.min - .3*Y.min ),
-                                   (.3*Y.max + Y.max)
-                                  )
-                      }
+                     y0plot1 <- dataprep.res$Y0plot %*% synth.res$solution.w
+
+                     # Get Ylim right
+                     if (sum(is.na(Ylim)) > 0) {
+                        Y.max <- max(c(y0plot1, dataprep.res$Y1plot))
+                        Y.min <- min(c(y0plot1, dataprep.res$Y1plot))
+                        # Pad each end by 30% of the data range so negative
+                        # Y.min extends downward (not toward zero).
+                        Y.pad <- 0.3 * (Y.max - Y.min)
+                        if (Y.pad == 0) Y.pad <- 0.3 * max(abs(c(Y.min, Y.max)), 1)
+                        Ylim <- c(Y.min - Y.pad, Y.max + Y.pad)
+                     }
                               
                       
                      plot(
@@ -70,19 +69,16 @@ function(
                                   
                  } else {
                  
-                 z0plot <- dataprep.res$Z0 %*% synth.res$solution.w                
-                                       
-                     # Get Ylim right 
-                     if(sum(is.na(Ylim))>0)
-                      {
-                        Y.max <-  max(c(z0plot,dataprep.res$Z1))
-                        Y.min <-  min(c(z0plot,dataprep.res$Z1))
-                        
-                        Ylim <- c(
-                                   (Y.min - .3*Y.min),
-                                   (.3*Y.max + Y.max)
-                                  )
-                      }
+                 z0plot <- dataprep.res$Z0 %*% synth.res$solution.w
+
+                     # Get Ylim right
+                     if (sum(is.na(Ylim)) > 0) {
+                        Y.max <- max(c(z0plot, dataprep.res$Z1))
+                        Y.min <- min(c(z0plot, dataprep.res$Z1))
+                        Y.pad <- 0.3 * (Y.max - Y.min)
+                        if (Y.pad == 0) Y.pad <- 0.3 * max(abs(c(Y.min, Y.max)), 1)
+                        Ylim <- c(Y.min - Y.pad, Y.max + Y.pad)
+                     }
                               
                       
                      plot(

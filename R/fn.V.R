@@ -14,9 +14,8 @@ function(
   {
   
     # check quadopt
-    Check <- sum(quadopt %in% c("ipop","LowRankQP"))
-    if(Check!=1){
-     stop("option quadopt must be one of ipop or LowRankQP") 
+    if (!(quadopt %in% c("ipop", "LowRankQP"))) {
+      stop("option quadopt must be \"ipop\" (\"LowRankQP\" is no longer supported)")
     }
   
     # rescale par
@@ -35,18 +34,13 @@ function(
     r <- 0
     
     # run QP and obtain w weights
-    # ipop
-    if(quadopt=="ipop"){
-    res <- ipop(c = c, H = H, A = A, b = b, l = l, u = u, r = r, bound = bound.ipop,
-                 margin = margin.ipop, maxiter = 1000, sigf = sigf.ipop)
-    solution.w <- as.matrix(primal(res))
-    } else {
-    # LowRankQP
-     if(quadopt=="LowRankQP"){
-     # res <- LowRankQP::LowRankQP(Vmat=H,dvec=c,Amat=A,bvec=1,uvec=rep(1,length(c)),method="LU")
-    #  solution.w <- as.matrix(res$alpha)
-       cat("LowRankQP no longer supoorted, please use quadopt==`ipop' instead")
-     } 
+    if (quadopt == "ipop") {
+      res <- ipop(c = c, H = H, A = A, b = b, l = l, u = u, r = r,
+                  bound = bound.ipop, margin = margin.ipop,
+                  maxiter = 1000, sigf = sigf.ipop)
+      solution.w <- as.matrix(primal(res))
+    } else if (quadopt == "LowRankQP") {
+      stop("LowRankQP is no longer supported; please use quadopt = \"ipop\" instead")
     }
             
     # compute losses

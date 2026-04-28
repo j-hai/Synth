@@ -16,16 +16,15 @@ function(           data.prep.obj = NULL,
                       )
   { 
     # Retrieve dataprep objects
-    if(is.null(data.prep.obj) == FALSE)
-      {
-        cat("\nX1, X0, Z1, Z0 all come directly from dataprep object.\n\n")
-        X1 <- data.prep.obj$X1
-        Z1 <- data.prep.obj$Z1
-        X0 <- data.prep.obj$X0
-        Z0 <- data.prep.obj$Z0
-      } else {
-        cat("X1,X0,Z1,Z0 were individually input (not dataprep object.)\n\n")
-      }
+    if (!is.null(data.prep.obj)) {
+      if (verbose) cat("\nX1, X0, Z1, Z0 all come directly from dataprep object.\n\n")
+      X1 <- data.prep.obj$X1
+      Z1 <- data.prep.obj$Z1
+      X0 <- data.prep.obj$X0
+      Z0 <- data.prep.obj$Z0
+    } else {
+      if (verbose) cat("X1, X0, Z1, Z0 were individually input (not dataprep object).\n\n")
+    }
 
      # routine checks
      store <- list(X1=X1,X0=X0,Z1=Z1,Z0=Z0)
@@ -43,21 +42,16 @@ function(           data.prep.obj = NULL,
     if(ncol(Z1)!=1){stop("\n Please specify only one treated unit: Z1 has to have ncol= 1")}
 
     if(ncol(X0)<2){stop("\n Please specify at least two control units: X0 has to have ncol >= 2 ")}
-    if(ncol(Z0)<2){stop("\n Please specify only one treated unit: Z0 has to have ncol >= 2")}
+    if(ncol(Z0)<2){stop("\n Please specify at least two control units: Z0 has to have ncol >= 2")}
 
     if(nrow(Z0)!=nrow(Z1)){stop("\n Different number of periods for treated and controls: nrow(Z0) unequal nrow(Z1)")}
     if(nrow(X0)!=nrow(X1)){stop("\n Different number of predictors for treated and controls: nrow(X0) unequal nrow(X1)")}
 
-    if(nrow(X0)==0){stop("No predictors specified. Please specify at least on predictor")}
-    if(nrow(Z0)==0){stop("No periods specified for Z1 and Z0. Please specify at least on period")}
+    if(nrow(X0)==0){stop("No predictors specified. Please specify at least one predictor")}
+    if(nrow(Z0)==0){stop("No periods specified for Z1 and Z0. Please specify at least one period")}
 
     if(0 %in% apply(X0,1,sd))
      {stop("\n At least one predictor in X0 has no variation across control units. Please remove this predictor.")}
-
-    # collinearity check
-   # check <- try(solve(t(X0)%*%X0),silent=TRUE)
-   # if(class(check)=="try-error")
-   #  {stop("\n Some of the predictors in X0 are collinear (t(X0)%*%X0) not invertible")}
 
     # Normalize X
     nvarsV <- dim(X0)[1]
@@ -67,10 +61,8 @@ function(           data.prep.obj = NULL,
       t(t(big.dataframe) %*% ( 1/(divisor) *
                               diag(rep(dim(big.dataframe)[1], 1)) ))
 
-    X0.scaled <- scaled.matrix[,c(1:(dim(X0)[2]))]
-    if(is.vector(X0.scaled)==TRUE)
-     {X0.scaled <- t(as.matrix(X0.scaled))}
-    X1.scaled <- scaled.matrix[,dim(scaled.matrix)[2]]
+    X0.scaled <- scaled.matrix[, 1:ncol(X0), drop = FALSE]
+    X1.scaled <- scaled.matrix[, ncol(scaled.matrix)]
 
 
     # check if custom v weights are supplied or
@@ -80,18 +72,15 @@ function(           data.prep.obj = NULL,
     if(is.null(custom.v) & nrow(X0) != 1)
       {
       
-      # two attemps for best V are made: 
-      # equal weights and regression based starting values 
-     cat("\n****************",
-         "\n searching for synthetic control unit  \n","\n"
-        )
-      
-      if(genoud == TRUE) # if user wants genoud as well
-      {
+      # two attempts for best V are made:
+      # equal weights and regression based starting values
+      if (verbose) cat("\n****************",
+                       "\n searching for synthetic control unit  \n", "\n")
+
+      if (genoud == TRUE) { # if user wants genoud as well
       # we run genoud first
-      cat("\n****************",
-         "\n genoud() requested for optimization\n","\n"
-        )
+      if (verbose) cat("\n****************",
+                       "\n genoud() requested for optimization\n", "\n")
 
       rgV.genoud <- rgenoud::genoud(
                              fn.V, 
@@ -107,9 +96,8 @@ function(           data.prep.obj = NULL,
                              )
       SV1 <- rgV.genoud$par  # and use these as starting values
 
-      cat("\n****************",
-         "\n genoud() finished, now running local optimization using optim()\n","\n"
-        )
+      if (verbose) cat("\n****************",
+                       "\n genoud() finished, now running local optimization using optim()\n", "\n")
 
       } else {
       # if we don't use genoud first: set of starting values: equal weights
@@ -197,22 +185,22 @@ function(           data.prep.obj = NULL,
       solution.v   <- abs(rgV.optim$par)/sum(abs(rgV.optim$par))
      } else { # jump here if only optimize over W
 
+     if (verbose) cat("\n****************",
+                      "\n optimization over w weights: computing synthetic control unit \n", "\n\n")
 
-     cat("\n****************",
-         "\n optimization over w weights: computing synthtic control unit \n","\n\n"
-         )
-
-     if(nrow(X0)==1)
-      {
-       custom.v <- 1 # this is the case where only one predictor is specified V is the identity matrix
-      } else {
-     # if user choose to supply v manually:
-     cat("\n****************",
-         "\n v weights supplied manually: computing synthtic control unit \n","\n\n"
-         )
-     if(length(custom.v) != nvarsV){stop("custom.V misspecified: length(custom.V) != nrow(X1)")}
-     if(mode(custom.v)!="numeric"){stop("custom.V must be numeric")}
-      }
+     if (nrow(X0) == 1) {
+       custom.v <- 1 # only one predictor: V is the identity matrix
+     } else {
+       # user-supplied v
+       if (verbose) cat("\n****************",
+                        "\n v weights supplied manually: computing synthetic control unit \n", "\n\n")
+       if (length(custom.v) != nvarsV) {
+         stop("custom.v misspecified: length(custom.v) != nrow(X0)")
+       }
+       if (mode(custom.v) != "numeric") {
+         stop("custom.v must be numeric")
+       }
+     }
 
     # enter solution.V
     rgV.optim  <- NULL
@@ -232,17 +220,15 @@ function(           data.prep.obj = NULL,
     u <- rep(1, length(c))
     r <- 0
 
-     if(quadopt=="ipop"){
-    res <- ipop(c = c, H = H, A = A, b = b, l = l, u = u, r = r,
-                margin = Margin.ipop, maxiter = 1000, sigf = Sigf.ipop, bound = Bound.ipop)
-    solution.w <- as.matrix(primal(res))
+    if (quadopt == "ipop") {
+      res <- ipop(c = c, H = H, A = A, b = b, l = l, u = u, r = r,
+                  margin = Margin.ipop, maxiter = 1000,
+                  sigf = Sigf.ipop, bound = Bound.ipop)
+      solution.w <- as.matrix(primal(res))
+    } else if (quadopt == "LowRankQP") {
+      stop("LowRankQP is no longer supported; please use quadopt = \"ipop\" instead")
     } else {
-    # LowRankQP
-     if(quadopt=="LowRankQP"){
-  #    res <- LowRankQP::LowRankQP(Vmat=H,dvec=c,Amat=A,bvec=1,uvec=rep(1,length(c)),method="LU")
-  #    solution.w <- as.matrix(res$alpha)
-       cat("LowRankQP no longer supoorted, please use quadopt==`ipop' instead")
-     } 
+      stop(sprintf("Unknown quadopt = \"%s\"; supported value is \"ipop\"", quadopt))
     }
 
     rownames(solution.w) <- colnames(X0)
@@ -258,15 +244,15 @@ function(           data.prep.obj = NULL,
     loss.v <- loss.v/nrow(Z0)      
  
     # produce viewable output
-    cat("\n****************",
-        "\n****************",
-        "\n****************",
-        "\n\nMSPE (LOSS V):", loss.v,
-  #      "\n\nLOSS (W):", loss.w,
-        "\n\nsolution.v:\n", round(as.numeric(solution.v), 10),
-        "\n\nsolution.w:\n", round(as.numeric(solution.w), 10),
-        "\n\n"
-        )
+    if (verbose) {
+      cat("\n****************",
+          "\n****************",
+          "\n****************",
+          "\n\nMSPE (LOSS V):", loss.v,
+          "\n\nsolution.v:\n", round(as.numeric(solution.v), 10),
+          "\n\nsolution.w:\n", round(as.numeric(solution.w), 10),
+          "\n\n")
+    }
         
     optimize.out <- list(
                          solution.v = solution.v,

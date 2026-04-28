@@ -23,7 +23,7 @@ function(
     if(mode(unit.variable) == "character"){unit.variable<-which(names(foo)==unit.variable)}
     if(is.null(unit.variable) == TRUE ||  mode(foo[,unit.variable])!="numeric")
       { stop("\n unit.variable not found as numeric variable in foo.\n")}
-    if(length(unit.variable)!=1){stop("\ Please specify only one unit.variable\n")}
+    if(length(unit.variable)!=1){stop("\n Please specify only one unit.variable\n")}
 
     # identify time.variable
     if(mode(time.variable) == "character"){time.variable<-which(names(foo)==time.variable)}
@@ -31,7 +31,7 @@ function(
       {
        stop("\n time.variable not found as numeric variable in foo.\n")
       }
-     if(length(time.variable)!=1){stop("\ Please specify only one time.variable\n")}
+     if(length(time.variable)!=1){stop("\n Please specify only one time.variable\n")}
     # identify units
      # check if unit.name var is there (required if any identifier is given as character)
      if(
@@ -113,7 +113,7 @@ function(
          {stop("\n treated unit among controls\n")}
          
         if(sum(duplicated(c(controls.identifier.name,treatment.identifier.name))) > 0)
-         {stop("n duplicate unit.variable.names across units\n")}
+         {stop("\n duplicate unit.variable.names across units\n")}
          
         # sort first by unit, then by time variable
          foo[,time.variable] <- as.numeric(as.character(foo[,time.variable]))
@@ -149,7 +149,7 @@ function(
         if(sum(duplicated(t.list[[i]]))>0)
          {stop(paste("\n duplicates in time",names(t.list[i]),"\n"))}
         if(length(t.list[[i]]) < 1)
-         {stop(paste("\n specificy at least one period in time",names(t.list[i]),"\n"))}
+         {stop(paste("\n specify at least one period in time",names(t.list[i]),"\n"))}
         for(p in t.list[[i]])
          {
           if(p %in% unique(foo[,time.variable]) == FALSE)
@@ -241,10 +241,11 @@ function(
 
        for(p in controls.identifier)
         {
-         if(sum(is.na(X0[X0[,ncol(X0)] == p,i])) == length(is.na(X0[X0[,ncol(X0)] == p,i])))
+         vals <- X0[X0[, ncol(X0)] == p, i]
+         if (sum(is.na(vals)) == length(vals))
          {stop(paste("\n control unit:",p,"; predictor:",names(X0)[i],"has missing data for all periods in time.predictors.prior\n"))}
         }
-       for(j in 1:nrow(X1))
+       for(j in 1:nrow(X0))
        {
          if(is.na(X0[j,i])){
          cat(paste("\n Missing data - control unit:",X0[j,ncol(X0)],"; predictor:",names(X0)[i],"; for period:",checknames[j],
@@ -304,7 +305,7 @@ function(
             if(sum(duplicated(sp.time))>0)
              {stop(paste("\n for special predictor:",sp.name," (which is special.predictor number",i,") time period contains duplicates\n"))}
             if(length(sp.time)<1)
-             {stop(paste("\n for special predictor:",sp.name," (which is special.predictor number",i,") specify at least on time period\n"))}
+             {stop(paste("\n for special predictor:",sp.name," (which is special.predictor number",i,") specify at least one time period\n"))}
              
            # time availability check
            for(p in sp.time)
@@ -316,7 +317,7 @@ function(
            # operator check
            sp.op <- special.predictors[[i]][[3]]
             if(mode(sp.op) != "character" || length(sp.op) !=1 )
-            {stop(paste("\n for special predictor:",sp.name," (which is special.predictor number",i,") the operator is mispecified\n"))}
+            {stop(paste("\n for special predictor:",sp.name," (which is special.predictor number",i,") the operator is misspecified\n"))}
 
            # now go and built matrices
            spf <- spec.pred.func(list.object = special.predictors[[i]],
@@ -338,12 +339,12 @@ function(
 
    # no predictors check
     if(nrow(X0)==0)
-     {stop("No predictors specified. Please specify at least on predictor")}
+     {stop("No predictors specified. Please specify at least one predictor")}
 
    # Dependent Variable Pretreatment
 
     if(is.null(dependent))
-     {stop("\n dependent variabale is missing")}
+     {stop("\n dependent variable is missing")}
 
     if(mode(foo[,dependent]) != "numeric")
          {stop(paste("\n dependent variable",dependent,"not found as numeric variable in foo \n"))}
