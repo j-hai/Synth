@@ -26,5 +26,6 @@ Suggests:
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 License: GPL (>= 2)
+Depends: R (>= 2.10)
 URL: https://web.stanford.edu/~jhain/
 Encoding: UTF-8

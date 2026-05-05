@@ -25,9 +25,10 @@ set.seed(1)
 
 ## Overview
 
-This vignette walks through inference for the synthetic control method as
-implemented in the `Synth` package, using the canonical Basque country
-example from Abadie and Gardeazabal (2003). For the basic `dataprep()` →
+This vignette walks through inference for the synthetic control method
+as implemented in the `Synth` package, using the canonical example
+from Abadie, Diamond, and Hainmueller (2010): California's
+Proposition 99 cigarette tax of 1988. For the basic `dataprep()` →
 `synth()` → `path.plot()` flow, see `vignette("synth-quickstart",
 package = "Synth")`.
 
@@ -42,7 +43,7 @@ package = "Synth")`.
 
 It covers:
 
-1. Building the synthetic control with `dataprep()` + `synth()`.
+1. Building the synthetic control with the new `synth_data()` wrapper.
 2. Computing prediction intervals with `synth_inference()`
    (split-conformal and Gaussian-residual methods).
 3. Running an in-space placebo test with `generate_placebos()`,
@@ -55,81 +56,59 @@ package on CRAN.
 
 ```{r setup}
 library(Synth)
-data(basque)
+data(smoking)
 ```
 
 ## 1. Build the synthetic control
 
-The Basque country (region 17) is the treated unit. The donor pool is
-the 16 other Spanish regions (excluding the national aggregate, region
-1). The intervention — onset of large-scale Basque terrorism — is dated
-to roughly 1970, so the pre-treatment optimization period is 1960–1969
-and the plot horizon runs through 1997.
+The `smoking` dataset (new in `Synth 1.2-0`) is the canonical
+state-level panel from Abadie, Diamond, and Hainmueller (2010): 39 US
+states from 1970 through 2000, with annual per-capita cigarette
+sales as the outcome and four covariates (log income, beer
+consumption, the share of the population aged 15-24, and the retail
+price of cigarettes). California raised its cigarette tax via
+Proposition 99 in late 1988, so 1989 is the first post-treatment
+year and the donor pool is the 38 other states.
 
 ```{r dataprep}
-dataprep.out <- dataprep(
-  foo                   = basque,
-  predictors            = c("school.illit", "school.prim", "school.med",
-                            "school.high", "school.post.high", "invest"),
-  predictors.op         = "mean",
-  dependent             = "gdpcap",
-  unit.variable         = "regionno",
-  time.variable         = "year",
-  special.predictors    = list(
-    list("gdpcap",          1960:1969,            "mean"),
-    list("sec.agriculture", seq(1961, 1969, 2),   "mean"),
-    list("sec.energy",      seq(1961, 1969, 2),   "mean"),
-    list("sec.industry",    seq(1961, 1969, 2),   "mean"),
-    list("sec.construction", seq(1961, 1969, 2),  "mean"),
-    list("sec.services.venta",     seq(1961, 1969, 2), "mean"),
-    list("sec.services.nonventa",  seq(1961, 1969, 2), "mean"),
-    list("popdens",         1969,                 "mean")
+ca_id <- unique(smoking$state_id[smoking$state_name == "California"])
+
+dp <- synth_data(
+  panel              = smoking,
+  outcome            = "cigsale",
+  unit_col           = "state_id",
+  time_col           = "year",
+  treated            = ca_id,
+  treatment_time     = 1989,
+  predictors         = c("lnincome", "age15to24", "retprice", "beer"),
+  special_predictors = list(
+    list("cigsale", 1988, "mean"),
+    list("cigsale", 1980, "mean"),
+    list("cigsale", 1975, "mean")
   ),
-  treatment.identifier  = 17,
-  controls.identifier   = c(2:16, 18),
-  time.predictors.prior = 1964:1969,
-  time.optimize.ssr     = 1960:1969,
-  unit.names.variable   = "regionname",
-  time.plot             = 1955:1997
+  unit_names_col     = "state_name"
 )
 
-# Combine top two schooling categories and convert to shares
-# (this matches the published Basque example).
-dataprep.out$X1["school.high", ] <-
-  dataprep.out$X1["school.high", ] + dataprep.out$X1["school.post.high", ]
-dataprep.out$X1 <- as.matrix(dataprep.out$X1[
-  -which(rownames(dataprep.out$X1) == "school.post.high"), ])
-dataprep.out$X0["school.high", ] <-
-  dataprep.out$X0["school.high", ] + dataprep.out$X0["school.post.high", ]
-dataprep.out$X0 <- dataprep.out$X0[
-  -which(rownames(dataprep.out$X0) == "school.post.high"), ]
-
-lowest  <- which(rownames(dataprep.out$X0) == "school.illit")
-highest <- which(rownames(dataprep.out$X0) == "school.high")
-dataprep.out$X1[lowest:highest, ] <-
-  100 * dataprep.out$X1[lowest:highest, ] /
-        sum(dataprep.out$X1[lowest:highest, ])
-dataprep.out$X0[lowest:highest, ] <-
-  100 * scale(dataprep.out$X0[lowest:highest, ],
-              center = FALSE,
-              scale  = colSums(dataprep.out$X0[lowest:highest, ]))
+fit <- synth(dp, verbose = FALSE)
 ```
 
-```{r synth}
-synth.out <- synth(data.prep.obj = dataprep.out, verbose = FALSE)
+The fitted weights match the published Proposition 99 paper closely:
+
+```{r weights}
+top <- sort(fit$solution.w[, 1], decreasing = TRUE)
+head(top, 5)
 ```
 
-A quick check that the standard plot reproduces the published Basque
-divergence around 1975:
+Synthetic California is roughly Utah + Nevada + Montana + Connecticut
+— a convex combination of states that, in the pre-period, smoked at
+similar rates and had similar demographics.
 
 ```{r path-plot}
-path.plot(synth.res = synth.out,
-          dataprep.res = dataprep.out,
-          Ylab = "Real per-capita GDP (1986 USD, thousands)",
+path.plot(synth.res = fit, dataprep.res = dp,
+          Ylab = "Cigarette sales per capita (packs)",
           Xlab = "Year",
-          Ylim = c(0, 13),
-          Legend = c("Basque country", "Synthetic Basque country"),
-          tr.intake = 1970)
+          Legend = c("California", "Synthetic California"),
+          tr.intake = 1989)
 ```
 
 ## 2. Prediction intervals: `synth_inference()`
@@ -139,48 +118,49 @@ counterfactual. Two methods are available.
 
 ### Split-conformal (default)
 
-The half-width is the `(1 - alpha)`-quantile of the absolute
-pre-treatment residuals (Chernozhukov, Wuthrich, and Zhu 2021):
+The half-width is the order statistic at rank
+$k = \lceil (n+1)(1-\alpha) \rceil$ of the absolute pre-treatment
+residuals (Chernozhukov, Wuthrich, and Zhu 2021):
 
 ```{r conformal}
-inf_conf <- synth_inference(synth.out, dataprep.out,
+inf_conf <- synth_inference(fit, dp,
                             method = "conformal", alpha = 0.10)
 inf_conf
 ```
 
 ```{r conformal-plot, fig.cap = "Split-conformal 90% band around the synthetic counterfactual."}
 plot(inf_conf,
-     Ylab = "Real per-capita GDP",
+     Ylab = "Cigarette sales per capita (packs)",
      Xlab = "Year",
-     Main = "Basque country: 90% conformal band")
+     Main = "California: 90% conformal band")
 ```
 
 The band is constant in width by construction. It is finite-sample
-valid when pre-treatment residuals are exchangeable; with autocorrelated
-outcomes the nominal coverage is approximate.
+valid when pre-treatment residuals are exchangeable; with
+autocorrelated outcomes the nominal coverage is approximate.
 
 ### Parametric (Gaussian residuals)
 
 The half-width is `qnorm(1 - alpha/2) * sd(gap_pre)`:
 
 ```{r parametric}
-inf_par <- synth_inference(synth.out, dataprep.out,
+inf_par <- synth_inference(fit, dp,
                            method = "parametric", alpha = 0.10)
 inf_par$sigma_pre
 ```
 
 ```{r parametric-plot, fig.cap = "Parametric Gaussian 90% band."}
 plot(inf_par,
-     Ylab = "Real per-capita GDP",
+     Ylab = "Cigarette sales per capita (packs)",
      Xlab = "Year",
-     Main = "Basque country: 90% parametric band")
+     Main = "California: 90% parametric band")
 ```
 
 ### When to use which
 
 | Method | Validity | Width |
 |---|---|---|
-| `conformal` | Exact under exchangeability of pre-period residuals | (1−α)-quantile of `|gap_pre|` |
+| `conformal` | Exact under exchangeability of pre-period residuals | order statistic of $|gap_{pre}|$ |
 | `parametric` | Exact under i.i.d. Gaussian residuals | `qnorm(1 - α/2) * sd(gap_pre)` |
 
 Both produce constant-width bands. They do *not* separately quantify
@@ -190,18 +170,18 @@ that decompose in-sample and out-of-sample uncertainty, see the
 
 ## 3. Placebo inference
 
-The classical Abadie–Diamond–Hainmueller approach treats each donor
-unit as if *it* had received the intervention, refits `synth()`, and
+The classical Abadie-Diamond-Hainmueller approach treats each donor
+state as if *it* had received the intervention, refits `synth()`, and
 ranks the treated unit's post/pre MSPE ratio against the placebo
 distribution.
 
 ### Generate the placebos
 
-`generate_placebos()` runs one refit per donor. With 16 Basque donors
-this takes ~30 seconds on a laptop.
+`generate_placebos()` runs one refit per donor. With 38 donor states
+this takes about a minute on a laptop.
 
 ```{r placebos}
-placebos <- generate_placebos(synth.out, dataprep.out, verbose = FALSE)
+placebos <- generate_placebos(fit, dp, verbose = FALSE)
 placebos
 ```
 
@@ -217,9 +197,13 @@ test$pvalue
 test$n_valid_placebos
 ```
 
+California's post/pre MSPE ratio is far in the right tail of the
+placebo distribution: only one or two of the 38 placebo states have
+ratios as extreme as California's, so the one-sided p-value is small.
+
 ### Plot the placebo distribution
 
-```{r mspe-plot, fig.cap = "Distribution of post/pre MSPE ratios across placebos. The treated unit (Basque country) is highlighted."}
+```{r mspe-plot, fig.cap = "Distribution of post/pre MSPE ratios across placebos. California is highlighted."}
 mspe_plot(placebos)
 ```
 
@@ -227,31 +211,31 @@ mspe_plot(placebos)
 
 ```{r placebo-gaps, fig.cap = "Treated gap (black) overlaid on placebo gaps (grey)."}
 plot_placebos(placebos,
-              Ylab = "Gap in real per-capita GDP",
+              Ylab = "Gap in cigarette sales per capita (packs)",
               Xlab = "Year",
-              Main = "Basque country and placebo gaps")
-abline(v = 1970, lty = 3)
+              Main = "California and placebo gaps")
+abline(v = 1989, lty = 3)
 ```
 
-For interpretability, ADH 2010 recommends dropping placebos whose
-pre-period MSPE is much worse than the treated unit's (their synthetic
-controls couldn't fit them well in the first place):
+For interpretability, ADH 2010 recommend dropping placebos whose
+pre-period MSPE is much worse than the treated unit's (their
+synthetic controls couldn't fit them well in the first place):
 
 ```{r placebo-gaps-trimmed, fig.cap = "Same plot, restricted to placebos with reasonable pre-period fit."}
 plot_placebos(placebos,
               mspe_threshold = 5,
-              Ylab = "Gap in real per-capita GDP",
+              Ylab = "Gap in cigarette sales per capita (packs)",
               Xlab = "Year",
-              Main = "Basque country and placebo gaps (pre-MSPE <= 5x treated)")
-abline(v = 1970, lty = 3)
+              Main = "California and placebo gaps (pre-MSPE <= 5x California)")
+abline(v = 1989, lty = 3)
 ```
 
 ## 4. Combining prediction intervals and placebos
 
-The two inference modes are orthogonal. A typical results section
-would include both: a prediction band on the path/gap plot to show the
-size of the post-period divergence, and a placebo p-value to show
-that the divergence is unusual relative to other regions.
+The two inference modes are orthogonal. A typical Proposition 99
+results section would include both: a prediction band on the path
+plot to show the size of the post-period drop, and a placebo
+p-value to show that the drop is unusual relative to other states.
 
 ```{r combined}
 data.frame(
@@ -273,10 +257,10 @@ backends are also available:
 
 ```{r alt-backends, eval = FALSE}
 # Convex-optimization backend (CVXR + ECOS)
-fit_cvxr  <- synth(dataprep.out, quadopt = "cvxr",  verbose = FALSE)
+fit_cvxr  <- synth(dp, quadopt = "cvxr",  verbose = FALSE)
 
 # Autodiff/GPU backend (Frank-Wolfe simplex LS via torch)
-fit_torch <- synth(dataprep.out, quadopt = "torch", verbose = FALSE)
+fit_torch <- synth(dp, quadopt = "torch", verbose = FALSE)
 ```
 
 Both are in `Suggests:` and only loaded when requested. The CVXR
@@ -299,22 +283,19 @@ completion).
   `?mspe_plot`, `?plot_placebos`.
 - The **SCtools** package provides additional placebo-based machinery
   (the function names in `Synth` match `SCtools` by design).
-- The **scpi** package implements Cattaneo–Feng–Palomba–Titiunik
+- The **scpi** package implements Cattaneo-Feng-Palomba-Titiunik
   prediction intervals, which decompose in-sample uncertainty about
   the synthetic weights and out-of-sample residual uncertainty.
 
 ## References
 
-- Abadie, A., and Gardeazabal, J. (2003). The economic costs of
-  conflict: A case study of the Basque country. *American Economic
-  Review*, 93(1), 113–132.
 - Abadie, A., Diamond, A., and Hainmueller, J. (2010). Synthetic
   control methods for comparative case studies. *Journal of the
-  American Statistical Association*, 105(490), 493–505.
+  American Statistical Association*, 105(490), 493-505.
 - Chernozhukov, V., Wuthrich, K., and Zhu, Y. (2021). An exact and
   robust conformal inference method for counterfactual and synthetic
   controls. *Journal of the American Statistical Association*,
-  116(536), 1849–1864.
+  116(536), 1849-1864.
 - Cattaneo, M. D., Feng, Y., Palomba, F., and Titiunik, R. (2025).
   Uncertainty quantification in synthetic controls with staggered
   treatment adoption. *Review of Economics and Statistics*.
