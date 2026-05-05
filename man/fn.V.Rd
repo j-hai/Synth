@@ -14,8 +14,10 @@ Z0 = stop("Z0 missing"),
 Z1 = stop("Z1 missing"), 
 margin.ipop = 5e-04, 
 sigf.ipop = 5, 
-bound.ipop = 10, 
-quadopt = "ipop")
+bound.ipop = 10,
+quadopt = "ipop",
+cvxr_pars = list(),
+torch_pars = list())
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -45,8 +47,14 @@ setting for ipop optimization routine: Clipping bound for the variables
 (see \code{\link[kernlab:ipop]{ipop}} for details)
 }
   \item{quadopt}{
-string vector that specifies the routine for quadratic optimization over w weights. 
-possible values are "ipop" (see \code{\link[kernlab:ipop]{ipop}} for details)
+string vector that specifies the routine for quadratic optimization over w weights.
+One of \code{"ipop"} (default; see \code{\link[kernlab:ipop]{ipop}}), \code{"cvxr"} (CVXR + ECOS), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package).
+}
+  \item{cvxr_pars}{
+Optional named list of CVXR backend tuning. Recognized fields: \code{solver} (default \code{"ECOS"}), \code{eps} (default \code{1e-8}), \code{max_iter} (default \code{5000}). Ignored unless \code{quadopt = "cvxr"}.
+}
+  \item{torch_pars}{
+Optional named list of torch backend tuning. Recognized fields: \code{max_iter} (default \code{500}), \code{tol} (default \code{1e-8}), \code{device} (default \code{"cpu"}; \code{"cuda"} or \code{"mps"} for GPU), \code{dtype} (default \code{"float64"}). Ignored unless \code{quadopt = "torch"}. Both \code{cvxr_pars} and \code{torch_pars} are forwarded by \code{\link{synth}} to every \code{fn.V} invocation during V-search, so the inner solves use the same backend configuration as the final W solve.
 }
 
 }

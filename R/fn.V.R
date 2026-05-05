@@ -8,41 +8,39 @@ function(
            margin.ipop = 0.0005,
            sigf.ipop = 5,
            bound.ipop = 10,
-           quadopt = "ipop"
+           quadopt = "ipop",
+           cvxr_pars = list(),
+           torch_pars = list()
            )
 
   {
-  
-    # check quadopt
-    if (!(quadopt %in% c("ipop", "LowRankQP"))) {
-      stop("option quadopt must be \"ipop\" (\"LowRankQP\" is no longer supported)")
+
+    # check quadopt: route LowRankQP through .solve_w() so it errors with
+    # the canonical message; reject other unknown options up front.
+    if (!(quadopt %in% c("ipop", "cvxr", "torch", "LowRankQP"))) {
+      stop(sprintf(
+        "Unknown quadopt = \"%s\"; supported values are \"ipop\", \"cvxr\", \"torch\"",
+        quadopt))
     }
-  
+
     # rescale par
-    #V <- diag( abs(variables.v)/sum(abs(variables.v)) )
     V <- diag(x=as.numeric(abs(variables.v)/sum(abs(variables.v))),
               nrow=length(variables.v),ncol=length(variables.v))
-    
+
     # set up QP problem
     H <- t(X0.scaled) %*% V %*% (X0.scaled)
     a <- X1.scaled
     c <- -1*c(t(a) %*% V %*% (X0.scaled) )
-    A <- t(rep(1, length(c)))
-    b <- 1
-    l <- rep(0, length(c))
-    u <- rep(1, length(c))
-    r <- 0
-    
+
     # run QP and obtain w weights
-    if (quadopt == "ipop") {
-      res <- ipop(c = c, H = H, A = A, b = b, l = l, u = u, r = r,
-                  bound = bound.ipop, margin = margin.ipop,
-                  maxiter = 1000, sigf = sigf.ipop)
-      solution.w <- as.matrix(primal(res))
-    } else if (quadopt == "LowRankQP") {
-      stop("LowRankQP is no longer supported; please use quadopt = \"ipop\" instead")
-    }
-            
+    solution.w <- .solve_w(
+      H, c, quadopt = quadopt,
+      ipop_pars  = list(margin = margin.ipop, sigf = sigf.ipop,
+                        bound  = bound.ipop,  maxiter = 1000),
+      cvxr_pars  = cvxr_pars,
+      torch_pars = torch_pars
+    )
+
     # compute losses
     loss.w <- as.numeric(t(X1.scaled - X0.scaled %*% solution.w) %*%
       (V) %*% (X1.scaled - X0.scaled %*% solution.w))
@@ -53,4 +51,3 @@ function(
 
     return(invisible(loss.v))
   }
-

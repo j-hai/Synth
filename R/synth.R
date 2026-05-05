@@ -8,13 +8,33 @@ function(           data.prep.obj = NULL,
                       optimxmethod = c("Nelder-Mead","BFGS"),
                       genoud = FALSE,
                       quadopt = "ipop",
+                      quadopt_inner = NULL,
+                      quadopt_outer = NULL,
+                      cvxr_pars = list(),
+                      cvxr_pars_inner = NULL,
+                      cvxr_pars_outer = NULL,
+                      torch_pars = list(),
+                      torch_pars_inner = NULL,
+                      torch_pars_outer = NULL,
                       Margin.ipop = 0.0005,
                       Sigf.ipop = 5,
                       Bound.ipop = 10,
                       verbose = FALSE,
                        ...
                       )
-  { 
+  {
+    # Resolve inner / outer quadopt: NULL falls back to the master `quadopt`,
+    # so existing scripts that pass quadopt = "..." keep working unchanged.
+    # Pass quadopt_outer = "cvxr" (or "torch") to use a modern solver only
+    # for the final W solve while keeping ipop's speed for the V-search.
+    if (is.null(quadopt_inner)) quadopt_inner <- quadopt
+    if (is.null(quadopt_outer)) quadopt_outer <- quadopt
+    # Same NULL-fallback for backend tuning lists.
+    if (is.null(cvxr_pars_inner))  cvxr_pars_inner  <- cvxr_pars
+    if (is.null(cvxr_pars_outer))  cvxr_pars_outer  <- cvxr_pars
+    if (is.null(torch_pars_inner)) torch_pars_inner <- torch_pars
+    if (is.null(torch_pars_outer)) torch_pars_outer <- torch_pars
+
     # Retrieve dataprep objects
     if (!is.null(data.prep.obj)) {
       if (verbose) cat("\nX1, X0, Z1, Z0 all come directly from dataprep object.\n\n")
@@ -89,10 +109,12 @@ function(           data.prep.obj = NULL,
                              X1.scaled = X1.scaled,
                              Z0 = Z0,
                              Z1 = Z1,
-                             quadopt = quadopt,
+                             quadopt = quadopt_inner,
                              margin.ipop = Margin.ipop,
                              sigf.ipop = Sigf.ipop,
-                             bound.ipop = Bound.ipop
+                             bound.ipop = Bound.ipop,
+                             cvxr_pars = cvxr_pars_inner,
+                             torch_pars = torch_pars_inner
                              )
       SV1 <- rgV.genoud$par  # and use these as starting values
 
@@ -118,10 +140,12 @@ function(           data.prep.obj = NULL,
                              X1.scaled = X1.scaled,
                              Z0 = Z0,
                              Z1 = Z1,
-                             quadopt = quadopt,
+                             quadopt = quadopt_inner,
                              margin.ipop = Margin.ipop,
                              sigf.ipop = Sigf.ipop,
-                             bound.ipop = Bound.ipop
+                             bound.ipop = Bound.ipop,
+                             cvxr_pars = cvxr_pars_inner,
+                             torch_pars = torch_pars_inner
                             )
       # get minimum
       if(verbose==TRUE){print(rgV.optim.1)}
@@ -158,10 +182,12 @@ function(           data.prep.obj = NULL,
                              X1.scaled = X1.scaled,
                              Z0 = Z0,
                              Z1 = Z1,
-                             quadopt = quadopt,
+                             quadopt = quadopt_inner,
                              margin.ipop = Margin.ipop,
                              sigf.ipop = Sigf.ipop,
-                             bound.ipop = Bound.ipop
+                             bound.ipop = Bound.ipop,
+                             cvxr_pars = cvxr_pars_inner,
+                             torch_pars = torch_pars_inner
                             )
       # get minimum
       if(verbose==TRUE){print(rgV.optim.2)}
@@ -220,16 +246,13 @@ function(           data.prep.obj = NULL,
     u <- rep(1, length(c))
     r <- 0
 
-    if (quadopt == "ipop") {
-      res <- ipop(c = c, H = H, A = A, b = b, l = l, u = u, r = r,
-                  margin = Margin.ipop, maxiter = 1000,
-                  sigf = Sigf.ipop, bound = Bound.ipop)
-      solution.w <- as.matrix(primal(res))
-    } else if (quadopt == "LowRankQP") {
-      stop("LowRankQP is no longer supported; please use quadopt = \"ipop\" instead")
-    } else {
-      stop(sprintf("Unknown quadopt = \"%s\"; supported value is \"ipop\"", quadopt))
-    }
+    solution.w <- .solve_w(
+      H, c, quadopt = quadopt_outer,
+      ipop_pars  = list(margin = Margin.ipop, sigf = Sigf.ipop,
+                        bound  = Bound.ipop,  maxiter = 1000),
+      cvxr_pars  = cvxr_pars_outer,
+      torch_pars = torch_pars_outer
+    )
 
     rownames(solution.w) <- colnames(X0)
     colnames(solution.w) <- "w.weight"

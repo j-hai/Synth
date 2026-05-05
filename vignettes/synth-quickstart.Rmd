@@ -1,0 +1,113 @@
+---
+title: "Quickstart: building a synthetic control with `Synth`"
+author: "Jens Hainmueller and Alexis Diamond"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Quickstart: building a synthetic control with Synth}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5,
+  dpi = 96
+)
+```
+
+This vignette is the five-minute version: how to build, fit, and inspect
+a synthetic control with `Synth`. For inference (prediction intervals,
+placebo p-values), see `vignette("inference", package = "Synth")`.
+
+## 1. Build the inputs
+
+The recommended path for new users is `synth_data()` — a one-line
+wrapper around `dataprep()` that picks sensible defaults. We use the
+canonical Basque-country example (Abadie & Gardeazabal 2003).
+
+```{r setup}
+library(Synth)
+data(basque)
+```
+
+```{r dataprep}
+dp <- synth_data(
+  panel              = basque,
+  outcome            = "gdpcap",
+  unit_col           = "regionno",
+  time_col           = "year",
+  treated            = 17,                              # Basque country
+  controls           = c(2:16, 18),                     # other regions
+  treatment_time     = 1970,
+  predictors         = c("school.illit", "school.prim",
+                         "invest"),
+  special_predictors = list(
+    list("gdpcap",          1960:1969,           "mean"),
+    list("sec.agriculture", seq(1961, 1969, 2),  "mean")
+  ),
+  unit_names_col     = "regionname"
+)
+```
+
+`synth_data()` returns a `dataprep`-shaped list, so anything downstream
+(`synth()`, `path.plot()`, `synth_inference()`, etc.) works exactly
+like the long-form `dataprep()` output.
+
+If you need full control over the column-by-column construction,
+`?dataprep` is still there.
+
+## 2. Fit the synthetic control
+
+```{r synth}
+fit <- synth(dp, verbose = FALSE)
+```
+
+`fit$solution.w` is the donor weights (sum to 1, all in `[0, 1]`).
+`fit$solution.v` is the predictor weights chosen by the V-search.
+
+## 3. Inspect
+
+`synth.tab()` produces a balance table comparing the treated unit to
+its synthetic control on each predictor:
+
+```{r tabs}
+tabs <- synth.tab(synth.res = fit, dataprep.res = dp)
+tabs$tab.pred
+```
+
+`path.plot()` shows the treated unit and its synthetic control over
+time:
+
+```{r path}
+path.plot(synth.res = fit, dataprep.res = dp,
+          Ylab = "Real per-capita GDP",
+          Xlab = "Year",
+          Legend = c("Basque country", "Synthetic Basque country"),
+          tr.intake = 1970)
+```
+
+`gaps.plot()` shows the gap (treated minus synthetic):
+
+```{r gaps}
+gaps.plot(synth.res = fit, dataprep.res = dp,
+          Ylab = "Gap in GDP per capita",
+          Xlab = "Year",
+          tr.intake = 1970)
+```
+
+## 4. What next?
+
+- For prediction intervals around the synthetic counterfactual, see
+  `?synth_inference` and `vignette("inference", package = "Synth")`.
+- For placebo-based inference (Abadie–Diamond–Hainmueller 2010), see
+  `?generate_placebos` and `?mspe_test`.
+- For ggplot2-friendly plots, `library(ggplot2)` and call
+  `autoplot()` on the inference / placebo objects.
+- For the long-form constructor, see `?dataprep`.

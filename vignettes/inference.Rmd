@@ -1,0 +1,320 @@
+---
+title: "Inference for Synthetic Control Estimators"
+author: "Jens Hainmueller and Alexis Diamond"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Inference for Synthetic Control Estimators}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5,
+  dpi = 96
+)
+set.seed(1)
+```
+
+## Overview
+
+This vignette walks through inference for the synthetic control method as
+implemented in the `Synth` package, using the canonical Basque country
+example from Abadie and Gardeazabal (2003). For the basic `dataprep()` →
+`synth()` → `path.plot()` flow, see `vignette("synth-quickstart",
+package = "Synth")`.
+
+### Which inference method should I use?
+
+| Question | Method | Function |
+|---|---|---|
+| How surprising is the effect vs. other units? | placebo MSPE-ratio rank | `mspe_test()` |
+| Lightweight prediction band around the counterfactual | split-conformal | `synth_inference(method = "conformal")` |
+| Same, with i.i.d. Gaussian residuals | parametric | `synth_inference(method = "parametric")` |
+| Period-varying intervals decomposing in/out-of-sample uncertainty | CFPT | `scpi::scpi()` (separate package) |
+
+It covers:
+
+1. Building the synthetic control with `dataprep()` + `synth()`.
+2. Computing prediction intervals with `synth_inference()`
+   (split-conformal and Gaussian-residual methods).
+3. Running an in-space placebo test with `generate_placebos()`,
+   `mspe_test()`, `mspe_plot()`, and `plot_placebos()`.
+
+For background on the method itself, see `?synth` and the references at
+the end. For methods that further decompose in-sample and out-of-sample
+uncertainty (period-varying prediction intervals), see the **scpi**
+package on CRAN.
+
+```{r setup}
+library(Synth)
+data(basque)
+```
+
+## 1. Build the synthetic control
+
+The Basque country (region 17) is the treated unit. The donor pool is
+the 16 other Spanish regions (excluding the national aggregate, region
+1). The intervention — onset of large-scale Basque terrorism — is dated
+to roughly 1970, so the pre-treatment optimization period is 1960–1969
+and the plot horizon runs through 1997.
+
+```{r dataprep}
+dataprep.out <- dataprep(
+  foo                   = basque,
+  predictors            = c("school.illit", "school.prim", "school.med",
+                            "school.high", "school.post.high", "invest"),
+  predictors.op         = "mean",
+  dependent             = "gdpcap",
+  unit.variable         = "regionno",
+  time.variable         = "year",
+  special.predictors    = list(
+    list("gdpcap",          1960:1969,            "mean"),
+    list("sec.agriculture", seq(1961, 1969, 2),   "mean"),
+    list("sec.energy",      seq(1961, 1969, 2),   "mean"),
+    list("sec.industry",    seq(1961, 1969, 2),   "mean"),
+    list("sec.construction", seq(1961, 1969, 2),  "mean"),
+    list("sec.services.venta",     seq(1961, 1969, 2), "mean"),
+    list("sec.services.nonventa",  seq(1961, 1969, 2), "mean"),
+    list("popdens",         1969,                 "mean")
+  ),
+  treatment.identifier  = 17,
+  controls.identifier   = c(2:16, 18),
+  time.predictors.prior = 1964:1969,
+  time.optimize.ssr     = 1960:1969,
+  unit.names.variable   = "regionname",
+  time.plot             = 1955:1997
+)
+
+# Combine top two schooling categories and convert to shares
+# (this matches the published Basque example).
+dataprep.out$X1["school.high", ] <-
+  dataprep.out$X1["school.high", ] + dataprep.out$X1["school.post.high", ]
+dataprep.out$X1 <- as.matrix(dataprep.out$X1[
+  -which(rownames(dataprep.out$X1) == "school.post.high"), ])
+dataprep.out$X0["school.high", ] <-
+  dataprep.out$X0["school.high", ] + dataprep.out$X0["school.post.high", ]
+dataprep.out$X0 <- dataprep.out$X0[
+  -which(rownames(dataprep.out$X0) == "school.post.high"), ]
+
+lowest  <- which(rownames(dataprep.out$X0) == "school.illit")
+highest <- which(rownames(dataprep.out$X0) == "school.high")
+dataprep.out$X1[lowest:highest, ] <-
+  100 * dataprep.out$X1[lowest:highest, ] /
+        sum(dataprep.out$X1[lowest:highest, ])
+dataprep.out$X0[lowest:highest, ] <-
+  100 * scale(dataprep.out$X0[lowest:highest, ],
+              center = FALSE,
+              scale  = colSums(dataprep.out$X0[lowest:highest, ]))
+```
+
+```{r synth}
+synth.out <- synth(data.prep.obj = dataprep.out, verbose = FALSE)
+```
+
+A quick check that the standard plot reproduces the published Basque
+divergence around 1975:
+
+```{r path-plot}
+path.plot(synth.res = synth.out,
+          dataprep.res = dataprep.out,
+          Ylab = "Real per-capita GDP (1986 USD, thousands)",
+          Xlab = "Year",
+          Ylim = c(0, 13),
+          Legend = c("Basque country", "Synthetic Basque country"),
+          tr.intake = 1970)
+```
+
+## 2. Prediction intervals: `synth_inference()`
+
+`synth_inference()` returns a prediction band around the synthetic
+counterfactual. Two methods are available.
+
+### Split-conformal (default)
+
+The half-width is the `(1 - alpha)`-quantile of the absolute
+pre-treatment residuals (Chernozhukov, Wuthrich, and Zhu 2021):
+
+```{r conformal}
+inf_conf <- synth_inference(synth.out, dataprep.out,
+                            method = "conformal", alpha = 0.10)
+inf_conf
+```
+
+```{r conformal-plot, fig.cap = "Split-conformal 90% band around the synthetic counterfactual."}
+plot(inf_conf,
+     Ylab = "Real per-capita GDP",
+     Xlab = "Year",
+     Main = "Basque country: 90% conformal band")
+```
+
+The band is constant in width by construction. It is finite-sample
+valid when pre-treatment residuals are exchangeable; with autocorrelated
+outcomes the nominal coverage is approximate.
+
+### Parametric (Gaussian residuals)
+
+The half-width is `qnorm(1 - alpha/2) * sd(gap_pre)`:
+
+```{r parametric}
+inf_par <- synth_inference(synth.out, dataprep.out,
+                           method = "parametric", alpha = 0.10)
+inf_par$sigma_pre
+```
+
+```{r parametric-plot, fig.cap = "Parametric Gaussian 90% band."}
+plot(inf_par,
+     Ylab = "Real per-capita GDP",
+     Xlab = "Year",
+     Main = "Basque country: 90% parametric band")
+```
+
+### When to use which
+
+| Method | Validity | Width |
+|---|---|---|
+| `conformal` | Exact under exchangeability of pre-period residuals | (1−α)-quantile of `|gap_pre|` |
+| `parametric` | Exact under i.i.d. Gaussian residuals | `qnorm(1 - α/2) * sd(gap_pre)` |
+
+Both produce constant-width bands. They do *not* separately quantify
+uncertainty about the synthetic weights. For period-varying intervals
+that decompose in-sample and out-of-sample uncertainty, see the
+**scpi** package.
+
+## 3. Placebo inference
+
+The classical Abadie–Diamond–Hainmueller approach treats each donor
+unit as if *it* had received the intervention, refits `synth()`, and
+ranks the treated unit's post/pre MSPE ratio against the placebo
+distribution.
+
+### Generate the placebos
+
+`generate_placebos()` runs one refit per donor. With 16 Basque donors
+this takes ~30 seconds on a laptop.
+
+```{r placebos}
+placebos <- generate_placebos(synth.out, dataprep.out, verbose = FALSE)
+placebos
+```
+
+### Test
+
+`mspe_test()` returns a one-sided p-value via the empirical rank of
+the treated unit's post/pre MSPE ratio:
+
+```{r test}
+test <- mspe_test(placebos)
+test$mspe_ratio_treated
+test$pvalue
+test$n_valid_placebos
+```
+
+### Plot the placebo distribution
+
+```{r mspe-plot, fig.cap = "Distribution of post/pre MSPE ratios across placebos. The treated unit (Basque country) is highlighted."}
+mspe_plot(placebos)
+```
+
+### Plot the placebo gaps
+
+```{r placebo-gaps, fig.cap = "Treated gap (black) overlaid on placebo gaps (grey)."}
+plot_placebos(placebos,
+              Ylab = "Gap in real per-capita GDP",
+              Xlab = "Year",
+              Main = "Basque country and placebo gaps")
+abline(v = 1970, lty = 3)
+```
+
+For interpretability, ADH 2010 recommends dropping placebos whose
+pre-period MSPE is much worse than the treated unit's (their synthetic
+controls couldn't fit them well in the first place):
+
+```{r placebo-gaps-trimmed, fig.cap = "Same plot, restricted to placebos with reasonable pre-period fit."}
+plot_placebos(placebos,
+              mspe_threshold = 5,
+              Ylab = "Gap in real per-capita GDP",
+              Xlab = "Year",
+              Main = "Basque country and placebo gaps (pre-MSPE <= 5x treated)")
+abline(v = 1970, lty = 3)
+```
+
+## 4. Combining prediction intervals and placebos
+
+The two inference modes are orthogonal. A typical results section
+would include both: a prediction band on the path/gap plot to show the
+size of the post-period divergence, and a placebo p-value to show
+that the divergence is unusual relative to other regions.
+
+```{r combined}
+data.frame(
+  method                = c("conformal 90%", "parametric 90%", "placebo p-value"),
+  width_or_pvalue       = c(2 * inf_conf$conformal_q,
+                            2 * stats::qnorm(0.95) * inf_par$sigma_pre,
+                            test$pvalue),
+  notes                 = c("constant-width band",
+                            "constant-width Gaussian band",
+                            "one-sided MSPE-ratio rank")
+)
+```
+
+## Alternative QP backends
+
+By default, `synth()` solves the inner simplex-constrained QP for the
+unit weights via `kernlab::ipop`. As of `Synth 1.2-0`, two opt-in
+backends are also available:
+
+```{r alt-backends, eval = FALSE}
+# Convex-optimization backend (CVXR + ECOS)
+fit_cvxr  <- synth(dataprep.out, quadopt = "cvxr",  verbose = FALSE)
+
+# Autodiff/GPU backend (Frank-Wolfe simplex LS via torch)
+fit_torch <- synth(dataprep.out, quadopt = "torch", verbose = FALSE)
+```
+
+Both are in `Suggests:` and only loaded when requested. The CVXR
+backend is a drop-in alternative useful when ipop converges slowly or
+you want a different solver pool (ECOS, SCS, OSQP, MOSEK). The torch
+backend supports CPU, CUDA, and Apple MPS via `torch_pars =
+list(device = "cuda")` and is most useful on large panels. The first
+torch call in a session may require `torch::install_torch()` to
+download libtorch (~600MB).
+
+For Python users with very large panels or who want autodiff at the
+estimator level, see [Apoorva Lal's `trex`
+package](https://github.com/apoorvalal/trex) — a PyTorch-native
+implementation of the synthetic control family (SC, synthdid, matrix
+completion).
+
+## See also
+
+- `?synth_inference`, `?generate_placebos`, `?mspe_test`,
+  `?mspe_plot`, `?plot_placebos`.
+- The **SCtools** package provides additional placebo-based machinery
+  (the function names in `Synth` match `SCtools` by design).
+- The **scpi** package implements Cattaneo–Feng–Palomba–Titiunik
+  prediction intervals, which decompose in-sample uncertainty about
+  the synthetic weights and out-of-sample residual uncertainty.
+
+## References
+
+- Abadie, A., and Gardeazabal, J. (2003). The economic costs of
+  conflict: A case study of the Basque country. *American Economic
+  Review*, 93(1), 113–132.
+- Abadie, A., Diamond, A., and Hainmueller, J. (2010). Synthetic
+  control methods for comparative case studies. *Journal of the
+  American Statistical Association*, 105(490), 493–505.
+- Chernozhukov, V., Wuthrich, K., and Zhu, Y. (2021). An exact and
+  robust conformal inference method for counterfactual and synthetic
+  controls. *Journal of the American Statistical Association*,
+  116(536), 1849–1864.
+- Cattaneo, M. D., Feng, Y., Palomba, F., and Titiunik, R. (2025).
+  Uncertainty quantification in synthetic controls with staggered
+  treatment adoption. *Review of Economics and Statistics*.

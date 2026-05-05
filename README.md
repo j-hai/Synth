@@ -77,6 +77,45 @@ gaps.plot(synth.res = synth.out, dataprep.res = dataprep.out)
 The classic Basque-country example from Abadie & Gardeazabal (2003) is
 available via `data(basque)`; see `?basque` and `?dataprep`.
 
+## What's new in 1.2-0
+
+* **`synth_data()`** — one-line ergonomic wrapper around `dataprep()`
+  for the common case (panel data frame + treated unit name + treatment
+  date). The 12-arg `dataprep()` is still there for advanced cases.
+* **`synth_inference()`** — split-conformal (Chernozhukov–Wuthrich–Zhu)
+  and parametric Gaussian prediction intervals around the synthetic
+  counterfactual. Returns an S3 object with `print()`, `plot()`, and
+  `as.data.frame()` methods.
+* **`generate_placebos()`, `mspe_test()`, `mspe_plot()`,
+  `plot_placebos()`** — full in-space placebo workflow following
+  Abadie, Diamond, and Hainmueller (2010). Function names match those
+  in the **SCtools** package by design; namespace-qualify if both are
+  loaded.
+* **Optional alternative QP backends** — `quadopt = "cvxr"` (CVXR + ECOS)
+  and `quadopt = "torch"` (Frank-Wolfe simplex LS via the `torch`
+  package, GPU/MPS-capable). Inner/outer split via `quadopt_inner` /
+  `quadopt_outer` keeps V-search at ipop's speed when only the final W
+  needs the modern solver.
+* **ggplot2 support** — `autoplot.synth_inference()` and
+  `autoplot.synth_placebos()` (when `library(ggplot2)` is attached).
+* **Cross-platform parallel placebos** — `parallel = TRUE` does the
+  right thing on Windows (PSOCK cluster) and unix-likes (forks).
+* **Two vignettes** — `vignette("synth-quickstart")` for a 5-minute
+  intro, `vignette("inference")` for the inference deep dive.
+
+### Choosing an inference method
+
+| Question                                                              | Method                              | Function                                     | Package |
+|---                                                                    |---                                  |---                                           |---      |
+| How surprising is the effect vs. other units?                          | placebo MSPE-ratio rank             | `mspe_test()`                                | Synth   |
+| Prediction band around the counterfactual (lightweight)                | split-conformal                     | `synth_inference(method = "conformal")`      | Synth   |
+| Prediction band assuming i.i.d. Gaussian residuals                     | parametric                          | `synth_inference(method = "parametric")`     | Synth   |
+| Period-varying intervals decomposing in/out-of-sample uncertainty      | CFPT prediction intervals           | `scpi::scpi()`                               | scpi    |
+| Multiple / staggered treated units                                     | augmented or generalized SC         | `augsynth`, `gsynth`                         | augsynth, gsynth |
+| GPU autodiff implementation of the SC family                           | torch-native SC + synthdid + MC     | `trex.panel`                                 | trex (Python) |
+
+See [`NEWS.md`](NEWS.md) for the full change log.
+
 ## What's new in 1.1-10
 
 * `synth(verbose = FALSE)` (the default) is now genuinely silent.
@@ -92,8 +131,6 @@ available via `data(basque)`; see `?basque` and `?dataprep`.
   predictors) section now iterates over all rows of X0 (it previously
   only covered the first time period for each control).
 * Several typos fixed in error/warning messages.
-
-See [`NEWS.md`](NEWS.md) for the full change log.
 
 ## License
 

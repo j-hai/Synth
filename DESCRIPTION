@@ -1,6 +1,6 @@
 Package: Synth
-Version: 1.1-10
-Date: 2026-04-28
+Version: 1.2-0
+Date: 2026-05-04
 Title: Synthetic Control Group Method for Comparative Case Studies
 Authors@R: c(person(given = 'Jens', family = 'Hainmueller', role = c('aut','cre'), email = 'jhain@stanford.edu'), person(given = 'Alexis', family = 'Diamond', role = 'aut'))
 Description: Implements the synthetic control group method for comparative case studies
@@ -17,8 +17,14 @@ Imports:
     optimx,
     rgenoud
 Suggests:
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    CVXR,
+    torch,
+    ggplot2
 Config/testthat/edition: 3
+VignetteBuilder: knitr
 License: GPL (>= 2)
 URL: https://web.stanford.edu/~jhain/
 Encoding: UTF-8

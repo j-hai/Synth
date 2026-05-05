@@ -1,11 +1,20 @@
 import(kernlab)
 import(optimx)
 import(rgenoud)
-importFrom("graphics", "abline", "legend", "lines")
-importFrom("stats", "sd", "var")
+importFrom("graphics", "abline", "axis", "legend", "lines", "polygon")
+importFrom("grDevices", "rgb")
+importFrom("stats", "qnorm", "quantile", "sd", "var")
+
 export(synth, dataprep, gaps.plot, path.plot, synth.tab, fn.V, spec.pred.func, collect.optimx)
+export(synth_inference, generate_placebos, mspe_test, mspe_plot, plot_placebos)
+export(synth_data)
 
+S3method(print, synth_inference)
+S3method(plot, synth_inference)
+S3method(as.data.frame, synth_inference)
+S3method(print, synth_placebos)
+S3method(plot, synth_placebos)
+S3method(as.data.frame, synth_placebos)
 
-
-
-
+S3method(ggplot2::autoplot, synth_inference)
+S3method(ggplot2::autoplot, synth_placebos)
