@@ -33,49 +33,65 @@ remotes::install_github("j-hai/Synth")
 
 ## Quick start
 
-The recommended workflow is `dataprep()` → `synth()` → `synth.tab()` /
-`path.plot()` / `gaps.plot()`.
+The recommended workflow is `synth_data()` → `synth()` → `synth.tab()` /
+`path.plot()` / `gaps.plot()`. The example below reproduces the
+California Proposition 99 analysis from Abadie, Diamond, and
+Hainmueller (2010) using the bundled `smoking` panel (39 states ×
+1970–2000 × cigarette sales + four predictors).
 
 ```r
 library(Synth)
-data(synth.data)
+data(smoking)
 
 # Build the input matrices from a panel data frame
-dataprep.out <- dataprep(
-  foo                    = synth.data,
-  predictors             = c("X1", "X2", "X3"),
-  predictors.op          = "mean",
-  dependent              = "Y",
-  unit.variable          = "unit.num",
-  time.variable          = "year",
-  special.predictors     = list(
-    list("Y", 1991, "mean"),
-    list("Y", 1985, "mean"),
-    list("Y", 1980, "mean")
+dataprep.out <- synth_data(
+  panel              = smoking,
+  outcome            = "cigsale",
+  unit_col           = "state_id",
+  time_col           = "year",
+  treated            = "California",
+  treatment_time     = 1989,
+  predictors         = c("lnincome", "age15to24", "retprice", "beer"),
+  special_predictors = list(
+    list("cigsale", 1988, "mean"),
+    list("cigsale", 1980, "mean"),
+    list("cigsale", 1975, "mean")
   ),
-  treatment.identifier   = 7,
-  controls.identifier    = c(29, 2, 13, 17, 32, 38),
-  time.predictors.prior  = 1984:1989,
-  time.optimize.ssr      = 1984:1990,
-  unit.names.variable    = "name",
-  time.plot              = 1984:1996
+  unit_names_col     = "state_name"
 )
 
 # Construct the synthetic control unit
 synth.out <- synth(dataprep.out)
 
-# Inspect
+# Inspect: donor weights and predictor balance
 synth.tab(synth.res = synth.out, dataprep.res = dataprep.out)
 
 # Plot the treated unit vs. its synthetic control
-path.plot(synth.res = synth.out, dataprep.res = dataprep.out)
+path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+          Ylab = "Per-capita cigarette sales (packs)",
+          Xlab = "Year",
+          Legend = c("California", "Synthetic California"))
 
 # Plot the gap (treated − synthetic) over time
-gaps.plot(synth.res = synth.out, dataprep.res = dataprep.out)
+gaps.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+          Ylab = "Gap in per-capita cigarette sales",
+          Xlab = "Year",
+          Main = "Proposition 99 (1989) gap, California − synthetic")
 ```
 
-The classic Basque-country example from Abadie & Gardeazabal (2003) is
-available via `data(basque)`; see `?basque` and `?dataprep`.
+After Proposition 99 raised cigarette taxes in 1989, California's
+per-capita sales fall well below its synthetic counterpart — the
+post-1988 gap is the estimated treatment effect. The synthetic
+California puts most of its weight on Utah (≈34%), Nevada (≈25%),
+Montana (≈20%), and Connecticut (≈11%); `synth.tab()` reports the
+full weight vector and pre-period predictor balance.
+
+For placebo inference around this estimate, see
+`vignette("inference")`. The classic 12-argument `dataprep()`
+interface still exists for advanced cases (per-predictor time
+windows, custom predictor matrices); see `?dataprep`. The
+Basque-country application from Abadie & Gardeazabal (2003) is
+available via `data(basque)`.
 
 ## What's new in 1.2-0
 
