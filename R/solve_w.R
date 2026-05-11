@@ -57,12 +57,16 @@ function(H, c_vec, pars)
     w <- CVXR::Variable(n)
     obj <- CVXR::Minimize(CVXR::quad_form(w, H) + 2 * sum(c_vec * w))
     prob <- CVXR::Problem(obj, list(w >= 0, sum(w) == 1))
-    res <- CVXR::solve(prob,
-                       solver = pars$solver %||% "ECOS",
-                       FEASTOL = pars$eps    %||% 1e-8,
-                       RELTOL  = pars$eps    %||% 1e-8,
-                       ABSTOL  = pars$eps    %||% 1e-8,
-                       num_iter = pars$max_iter %||% 5000)
+    # Use CVXR::psolve (not CVXR::solve) -- the colliding `solve`
+    # export was removed from CVXR in a recent release to avoid
+    # masking base::solve; psolve has been the documented
+    # Problem-solving entry point for years.
+    res <- CVXR::psolve(prob,
+                        solver = pars$solver %||% "ECOS",
+                        FEASTOL = pars$eps    %||% 1e-8,
+                        RELTOL  = pars$eps    %||% 1e-8,
+                        ABSTOL  = pars$eps    %||% 1e-8,
+                        num_iter = pars$max_iter %||% 5000)
     if (!(res$status %in% c("optimal", "optimal_inaccurate"))) {
       stop(sprintf("CVXR solver returned status: %s", res$status))
     }
