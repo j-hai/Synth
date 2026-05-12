@@ -31,6 +31,11 @@ install.packages("Synth")
 remotes::install_github("j-hai/Synth")
 ```
 
+## Documentation
+
+- [Project page](https://web.stanford.edu/~jhain/projects/2_project_scm/) — package overview and current release notes.
+- [Explainer](https://web.stanford.edu/~jhain/projects/synthetic-control-methods-explainer/) — a self-contained tutorial on the synthetic control method for R and Stata users, with the canonical Proposition 99 example worked end-to-end.
+
 ## Quick start
 
 The recommended workflow is `synth_data()` → `synth()` → `synth.tab()` /
