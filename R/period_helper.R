@@ -29,9 +29,16 @@ function(dataprep.res, treatment_time = NULL)
     if (is.null(time.plot) || is.null(time.pre))
       stop("\n dataprep.res$tag is missing time.plot or time.optimize.ssr \n")
 
-    # Default treatment_time = max(SSR window) + 1
+    # Default treatment_time: prefer the value the user passed to
+    # synth_data() (stashed on the tag) so synth_inference(fit, dp)
+    # works without a redundant treatment_time argument. Fall back to
+    # max(SSR window) + 1 only when no stored value is available --
+    # that fallback breaks panels where the SSR window deliberately
+    # excludes the last pre-treatment years (e.g. basque pre = 1960:1965
+    # with treatment_time = 1970).
     if (is.null(treatment_time)) {
-      treatment_time <- max(time.pre) + 1
+      stored <- dataprep.res$tag$synth_data_treatment_time
+      treatment_time <- if (!is.null(stored)) stored else max(time.pre) + 1
     } else {
       if (!is.numeric(treatment_time) || length(treatment_time) != 1 ||
           !is.finite(treatment_time))

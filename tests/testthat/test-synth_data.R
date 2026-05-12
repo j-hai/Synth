@@ -134,6 +134,32 @@ test_that("synth_data() works without unit_names_col (numeric ids only)", {
   expect_equal(ncol(auto$X1), 1)
 })
 
+test_that("synth_data() default plot_periods respects observed times (regression)", {
+  # On a gapped (e.g. biennial) panel, defaulting plot_periods to
+  # min:max would invent unobserved years and trip dataprep().
+  data(basque)
+  # Keep only odd years to fabricate a gap.
+  sparse <- basque[basque$year %% 2 == 1, ]
+  expect_silent(
+    dp <- synth_data(
+      panel               = sparse,
+      outcome             = "gdpcap",
+      unit_col            = "regionno",
+      time_col            = "year",
+      treated             = 17,
+      treatment_time      = 1971,
+      pre_periods         = sparse$year[sparse$year < 1971 & sparse$regionno == 17],
+      special_predictors  = list(list("gdpcap", 1961, "mean")),
+      unit_names_col      = "regionname"
+    )
+  )
+  # Stored time.plot must be the observed (gapped) sequence, not
+  # min:max.
+  expect_true(all(dp$tag$time.plot %in% sparse$year))
+  # And every plot period appears in the original panel.
+  expect_false(any(setdiff(dp$tag$time.plot, sparse$year)))
+})
+
 test_that("synth_data() rejects malformed inputs", {
   data(basque)
   expect_error(synth_data(panel = matrix(1)), "must be a data.frame")

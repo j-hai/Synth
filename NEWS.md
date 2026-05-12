@@ -79,8 +79,11 @@
 * `synth()` and `fn.V()` gain two new opt-in values for `quadopt`:
 
     * `quadopt = "cvxr"` solves the W-step via the `CVXR` package
-      (default solver: ECOS). Adds no required dependency; `CVXR` lives
-      in `Suggests:` and is loaded only when requested.
+      (default solver: OSQP, a hard `Imports` of CVXR and therefore
+      always available; alternative solvers `"SCS"`, `"ECOS"`, or
+      `"MOSEK"` can be selected via `cvxr_pars`). Adds no required
+      dependency; `CVXR` lives in `Suggests:` and is loaded only when
+      requested.
     * `quadopt = "torch"` solves the W-step via Frank-Wolfe simplex
       least squares using the `torch` package, with optional GPU/MPS
       support (`torch_pars = list(device = "cuda")` or `"mps"`). Also

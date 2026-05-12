@@ -82,3 +82,29 @@ test_that(".mspe_summary() returns NA mspe_ratio when no post periods", {
   expect_true(is.na(s$post_mspe))
   expect_true(is.na(s$mspe_ratio))
 })
+
+test_that(".period_indices() prefers stored synth_data_treatment_time (regression)", {
+  # When synth_data() runs with treatment_time strictly later than
+  # max(time.optimize.ssr) + 1 -- e.g. SSR window deliberately
+  # excludes the last pre-treatment years -- the old default
+  # (max(time.pre) + 1) inferred the wrong cutoff and classified
+  # genuine pre-treatment years as post-period. The stored tag now
+  # takes precedence.
+  d <- make_dataprep()
+  d$tag$time.plot                 <- 1960:1980
+  d$tag$time.optimize.ssr         <- 1960:1965
+  d$tag$synth_data_treatment_time <- 1970
+  p <- Synth:::.period_indices(d)
+  expect_equal(p$treatment_time, 1970)
+  # Years 1966-1969 are pre-treatment but outside the SSR window;
+  # they must NOT show up in post_idx.
+  expect_false(any(d$tag$time.plot[p$post_idx] %in% 1966:1969))
+  expect_true(all(d$tag$time.plot[p$post_idx] >= 1970))
+})
+
+test_that(".period_indices() falls back to max(SSR)+1 without stored value", {
+  d <- make_dataprep()
+  d$tag$synth_data_treatment_time <- NULL  # explicitly absent
+  p <- Synth:::.period_indices(d)
+  expect_equal(p$treatment_time, max(d$tag$time.optimize.ssr) + 1)
+})

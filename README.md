@@ -107,7 +107,7 @@ available via `data(basque)`.
   Abadie, Diamond, and Hainmueller (2010). Function names match those
   in the **SCtools** package by design; namespace-qualify if both are
   loaded.
-* **Optional alternative QP backends** — `quadopt = "cvxr"` (CVXR + ECOS)
+* **Optional alternative QP backends** — `quadopt = "cvxr"` (CVXR + OSQP by default)
   and `quadopt = "torch"` (Frank-Wolfe simplex LS via the `torch`
   package, GPU/MPS-capable). Inner/outer split via `quadopt_inner` /
   `quadopt_outer` keeps V-search at ipop's speed when only the final W

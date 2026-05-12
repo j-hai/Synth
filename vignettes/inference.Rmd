@@ -256,7 +256,7 @@ unit weights via `kernlab::ipop`. As of `Synth 1.2-0`, two opt-in
 backends are also available:
 
 ```{r alt-backends, eval = FALSE}
-# Convex-optimization backend (CVXR + ECOS)
+# Convex-optimization backend (CVXR; default solver is OSQP)
 fit_cvxr  <- synth(dp, quadopt = "cvxr",  verbose = FALSE)
 
 # Autodiff/GPU backend (Frank-Wolfe simplex LS via torch)
@@ -265,7 +265,8 @@ fit_torch <- synth(dp, quadopt = "torch", verbose = FALSE)
 
 Both are in `Suggests:` and only loaded when requested. The CVXR
 backend is a drop-in alternative useful when ipop converges slowly or
-you want a different solver pool (ECOS, SCS, OSQP, MOSEK). The torch
+you want a different solver pool (OSQP by default; SCS, ECOS, or
+MOSEK selectable via `cvxr_pars = list(solver = ...)`). The torch
 backend supports CPU, CUDA, and Apple MPS via `torch_pars =
 list(device = "cuda")` and is most useful on large panels. The first
 torch call in a session may require `torch::install_torch()` to

@@ -58,7 +58,7 @@ Character vector specifying optimization algorithms to be used. Permissible valu
 Logical flag. If \code{TRUE}, \code{\link{synth}} performs a two-step optimization. In the first step, \code{\link[rgenoud:genoud]{genoud}} is used to obtain a global solution. In the second step, the results are passed to the algorithm(s) chosen in \code{optimxmethod} for local optimization. This two-step procedure is slower but may yield lower loss for irregular search spaces.
 }
   \item{quadopt}{
-Character specifying the routine for quadratic optimization over W weights. One of \code{"ipop"} (default; \code{\link[kernlab:ipop]{ipop}} from \pkg{kernlab}, behavior unchanged from earlier versions of \pkg{Synth}), \code{"cvxr"} (CVXR + ECOS; requires the \pkg{CVXR} package, in \code{Suggests:}), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package, also in \code{Suggests:}; supports CPU, CUDA, and Apple MPS via \code{torch_pars}). The two new backends are opt-in for users with larger panels or who prefer modern convex-optimization or autodiff/GPU machinery; on small panels they agree with ipop to within solver tolerance.
+Character specifying the routine for quadratic optimization over W weights. One of \code{"ipop"} (default; \code{\link[kernlab:ipop]{ipop}} from \pkg{kernlab}, behavior unchanged from earlier versions of \pkg{Synth}), \code{"cvxr"} (CVXR with OSQP as the default solver; requires the \pkg{CVXR} package, in \code{Suggests:}), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package, also in \code{Suggests:}; supports CPU, CUDA, and Apple MPS via \code{torch_pars}). The two new backends are opt-in for users with larger panels or who prefer modern convex-optimization or autodiff/GPU machinery; on small panels they agree with ipop to within solver tolerance.
 
 When \code{quadopt} alone is specified it applies to both the inner and outer QP solves. To use different backends for the two stages — e.g. fast \code{ipop} for the V-search loop and a modern solver only for the final W solve — use \code{quadopt_inner} and \code{quadopt_outer} below.
 }
@@ -69,7 +69,7 @@ Optional character. If non-\code{NULL}, overrides \code{quadopt} for the QP solv
 Optional character. If non-\code{NULL}, overrides \code{quadopt} for the final W solve once V is fixed. Defaults to \code{NULL}, which means "inherit \code{quadopt}". The common pattern is \code{quadopt_outer = "cvxr"} (or \code{"torch"}) with \code{quadopt} left at \code{"ipop"}: V-search runs at ipop's speed and only the final W is solved with the modern backend.
 }
   \item{cvxr_pars}{
-Optional named list of tuning parameters forwarded to the CVXR backend when \code{quadopt} or \code{quadopt_outer} is \code{"cvxr"}. Recognized fields: \code{solver} (default \code{"ECOS"}; other CVXR-supported solvers like \code{"SCS"}, \code{"OSQP"}, or \code{"MOSEK"} can be passed), \code{eps} (default \code{1e-8}), and \code{max_iter} (default \code{5000}).
+Optional named list of tuning parameters forwarded to the CVXR backend when \code{quadopt} or \code{quadopt_outer} is \code{"cvxr"}. Recognized fields: \code{solver} (default \code{"OSQP"}, a hard CVXR dependency that ships everywhere CVXR does; other CVXR-supported solvers like \code{"SCS"}, \code{"ECOS"} (requires \pkg{ECOSolveR}), or \code{"MOSEK"} (requires a MOSEK license) can be passed), \code{eps} (default \code{1e-8}), and \code{max_iter} (default \code{5000}). The generic \code{eps} and \code{max_iter} are translated to whichever parameter names the chosen solver expects.
 }
   \item{torch_pars}{
 Optional named list of tuning parameters forwarded to the torch backend when \code{quadopt} or \code{quadopt_outer} is \code{"torch"}. Recognized fields: \code{max_iter} (default \code{500}), \code{tol} (default \code{1e-8}), \code{device} (default \code{"cpu"}; pass \code{"cuda"} for NVIDIA GPU or \code{"mps"} for Apple Silicon), and \code{dtype} (\code{"float64"} default or \code{"float32"} for speed).
@@ -140,9 +140,11 @@ gaps.plot(dataprep.res = dataprep.out, synth.res = synth.out)
 }
 \dontrun{
 ## Alternative quadopt backends (Synth 1.2-0+; both in Suggests:).
-## Defaults to ipop. CVXR uses ECOS as the cone solver; torch uses
-## Frank-Wolfe simplex least squares with exact line search and can
-## run on GPU/MPS via the device argument.
+## Defaults to ipop. CVXR uses OSQP by default (a CVXR Imports, so
+## always available); pass cvxr_pars = list(solver = "SCS") or
+## "ECOS" (the latter needs ECOSolveR). Torch uses Frank-Wolfe
+## simplex least squares with exact line search and can run on
+## GPU/MPS via the device argument.
 ##
 ## On the Basque example all three backends produce essentially the
 ## same synthetic control: identical pre-MSPE (0.0089), post-MSPE

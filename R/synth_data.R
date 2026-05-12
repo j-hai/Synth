@@ -72,11 +72,13 @@ function(panel,
     }
     controls.id <- as.numeric(sort(controls.id))
 
-    # Resolve time windows. plot_periods defaults to the panel range;
-    # pre_periods to all panel times strictly before treatment_time.
+    # Resolve time windows. plot_periods defaults to the observed
+    # panel times (not min:max, which would invent unobserved periods
+    # on gapped/biennial panels and trigger dataprep() failures);
+    # pre_periods to all observed times strictly before treatment_time.
     all.times <- sort(unique(panel[[time_col]]))
     if (is.null(plot_periods))
-      plot_periods <- min(all.times):max(all.times)
+      plot_periods <- all.times
     if (is.null(pre_periods))
       pre_periods <- all.times[all.times < treatment_time]
     if (length(pre_periods) < 2)
