@@ -57,16 +57,29 @@ function(H, c_vec, pars)
     w <- CVXR::Variable(n)
     obj <- CVXR::Minimize(CVXR::quad_form(w, H) + 2 * sum(c_vec * w))
     prob <- CVXR::Problem(obj, list(w >= 0, sum(w) == 1))
-    # Use CVXR::psolve (not CVXR::solve) -- the colliding `solve`
-    # export was removed from CVXR in a recent release to avoid
-    # masking base::solve; psolve has been the documented
-    # Problem-solving entry point for years.
-    res <- CVXR::psolve(prob,
-                        solver = pars$solver %||% "ECOS",
-                        FEASTOL = pars$eps    %||% 1e-8,
-                        RELTOL  = pars$eps    %||% 1e-8,
-                        ABSTOL  = pars$eps    %||% 1e-8,
-                        num_iter = pars$max_iter %||% 5000)
+    # Default solver: OSQP. It is a hard Imports of CVXR (always
+    # available wherever CVXR is) and is well-suited to QPs with
+    # simplex constraints. ECOS used to be the default but requires
+    # ECOSolveR (a CVXR Suggests, often absent on minimal installs).
+    # We map our generic pars$eps / pars$max_iter onto whichever
+    # parameter names the chosen solver expects so users keep a
+    # consistent API across backends. psolve() (not solve()) is the
+    # documented entry point; CVXR removed the `solve` export to
+    # avoid masking base::solve.
+    solver  <- pars$solver   %||% "OSQP"
+    eps_val <- pars$eps      %||% 1e-8
+    iter_max <- pars$max_iter %||% 5000
+    solver_args <- switch(solver,
+      ECOS = list(FEASTOL = eps_val, RELTOL = eps_val, ABSTOL = eps_val,
+                  num_iter = iter_max),
+      OSQP = list(eps_abs = eps_val, eps_rel = eps_val,
+                  max_iter = iter_max),
+      SCS  = list(eps_abs = eps_val, eps_rel = eps_val,
+                  max_iters = iter_max),
+      list(eps_abs = eps_val, eps_rel = eps_val, max_iter = iter_max)
+    )
+    res <- do.call(CVXR::psolve, c(list(prob, solver = solver),
+                                   solver_args))
     if (!(res$status %in% c("optimal", "optimal_inaccurate"))) {
       stop(sprintf("CVXR solver returned status: %s", res$status))
     }
