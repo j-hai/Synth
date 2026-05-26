@@ -20,7 +20,7 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    CVXR,
+    CVXR (>= 1.8.0),
     torch,
     ggplot2
 Config/testthat/edition: 3
