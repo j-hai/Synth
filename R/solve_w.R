@@ -5,7 +5,7 @@
 #   subject to sum(w) = 1, 0 <= w <= 1
 # with one of three backends:
 #   "ipop"  -- kernlab::ipop (default; behaves identically to <= 1.1-10)
-#   "cvxr"  -- CVXR + ECOS (Suggests CVXR)
+#   "cvxr"  -- CVXR + OSQP (Suggests CVXR)
 #   "torch" -- Frank-Wolfe simplex LS via the torch package (Suggests torch)
 #
 # Returns a one-column matrix of length n with rownames == colnames(X0).
@@ -14,7 +14,7 @@
 function(H, c_vec,
          quadopt   = "ipop",
          ipop_pars = list(margin = 0.0005, sigf = 5, bound = 10, maxiter = 1000),
-         cvxr_pars = list(solver = "ECOS", eps = 1e-8, max_iter = 5000),
+         cvxr_pars = list(solver = "OSQP", eps = 1e-8, max_iter = 5000),
          torch_pars = list(max_iter = 500, tol = 1e-8,
                            device = "cpu", dtype = "float64"))
   {
