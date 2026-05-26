@@ -5,7 +5,7 @@
 #   subject to sum(w) = 1, 0 <= w <= 1
 # with one of three backends:
 #   "ipop"  -- kernlab::ipop (default; behaves identically to <= 1.1-10)
-#   "cvxr"  -- CVXR + ECOS (Suggests CVXR)
+#   "cvxr"  -- CVXR + CLARABEL (Suggests CVXR >= 1.8)
 #   "torch" -- Frank-Wolfe simplex LS via the torch package (Suggests torch)
 #
 # Returns a one-column matrix of length n with rownames == colnames(X0).
@@ -14,7 +14,7 @@
 function(H, c_vec,
          quadopt   = "ipop",
          ipop_pars = list(margin = 0.0005, sigf = 5, bound = 10, maxiter = 1000),
-         cvxr_pars = list(solver = "ECOS", eps = 1e-8, max_iter = 5000),
+         cvxr_pars = list(solver = "CLARABEL", eps = 1e-8, max_iter = 5000),
          torch_pars = list(max_iter = 500, tol = 1e-8,
                            device = "cpu", dtype = "float64"))
   {
@@ -57,34 +57,41 @@ function(H, c_vec, pars)
     w <- CVXR::Variable(n)
     obj <- CVXR::Minimize(CVXR::quad_form(w, H) + 2 * sum(c_vec * w))
     prob <- CVXR::Problem(obj, list(w >= 0, sum(w) == 1))
-    # Default solver: OSQP. It is a hard Imports of CVXR (always
-    # available wherever CVXR is) and is well-suited to QPs with
-    # simplex constraints. ECOS used to be the default but requires
-    # ECOSolveR (a CVXR Suggests, often absent on minimal installs).
-    # We map our generic pars$eps / pars$max_iter onto whichever
-    # parameter names the chosen solver expects so users keep a
-    # consistent API across backends. psolve() (not solve()) is the
-    # documented entry point; CVXR removed the `solve` export to
-    # avoid masking base::solve.
-    solver  <- pars$solver   %||% "OSQP"
-    eps_val <- pars$eps      %||% 1e-8
+    # Default solver: CLARABEL, an interior-point conic solver bundled as a
+    # hard Imports of CVXR (>= 1.8), so it is always available. The choice of
+    # an interior-point method is deliberate: like kernlab::ipop it converges
+    # to a central point of the optimal face, so its W tracks the ipop backend
+    # closely. A first-order solver such as OSQP can settle on a different
+    # optimal point and yield a noticeably different pre-period fit. (ECOS, the
+    # former interior-point default, was dropped because ECOSolveR is no longer
+    # bundled with CVXR.) CVXR (>= 1.8) takes solver-agnostic tolerance names
+    # (reltol/abstol/feastol/num_iter) and maps them to each solver's native
+    # options. psolve() (not solve()) is the documented entry point; CVXR
+    # removed the `solve` export to avoid masking base::solve. Its return value
+    # also differs by CVXR version (see below), so we read status/value
+    # defensively.
+    solver   <- pars$solver   %||% "CLARABEL"
+    eps_val  <- pars$eps      %||% 1e-8
     iter_max <- pars$max_iter %||% 5000
-    solver_args <- switch(solver,
-      ECOS = list(FEASTOL = eps_val, RELTOL = eps_val, ABSTOL = eps_val,
-                  num_iter = iter_max),
-      OSQP = list(eps_abs = eps_val, eps_rel = eps_val,
-                  max_iter = iter_max),
-      SCS  = list(eps_abs = eps_val, eps_rel = eps_val,
-                  max_iters = iter_max),
-      list(eps_abs = eps_val, eps_rel = eps_val, max_iter = iter_max)
-    )
-    res <- do.call(CVXR::psolve, c(list(prob, solver = solver),
-                                   solver_args))
-    if (!(res$status %in% c("optimal", "optimal_inaccurate"))) {
-      stop(sprintf("CVXR solver returned status: %s", res$status))
+    res <- do.call(CVXR::psolve,
+                   list(prob, solver = solver,
+                        reltol = eps_val, abstol = eps_val,
+                        feastol = eps_val, num_iter = iter_max))
+    # CVXR >= 1.8 changed psolve()'s return value: it now yields the optimal
+    # objective value (a numeric scalar) and exposes the solution status and
+    # variable values through accessors on the problem/variable. Older CVXR
+    # (<= 1.0) returned a list carrying $status and a $getValue() closure.
+    if (is.atomic(res)) {
+      st    <- CVXR::status(prob)
+      w_val <- CVXR::value(w)
+    } else {
+      st    <- res$status
+      w_val <- res$getValue(w)
     }
-    val <- res$getValue(w)
-    val <- pmax(val, 0)
+    if (!(st %in% c("optimal", "optimal_inaccurate"))) {
+      stop(sprintf("CVXR solver returned status: %s", st))
+    }
+    val <- pmax(w_val, 0)
     val <- val / sum(val)
     as.matrix(val)
   }
