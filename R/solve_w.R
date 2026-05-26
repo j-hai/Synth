@@ -65,7 +65,8 @@ function(H, c_vec, pars)
     # parameter names the chosen solver expects so users keep a
     # consistent API across backends. psolve() (not solve()) is the
     # documented entry point; CVXR removed the `solve` export to
-    # avoid masking base::solve.
+    # avoid masking base::solve. Its return value differs by CVXR
+    # version (see below), so we read status/value defensively.
     solver  <- pars$solver   %||% "OSQP"
     eps_val <- pars$eps      %||% 1e-8
     iter_max <- pars$max_iter %||% 5000
@@ -80,11 +81,21 @@ function(H, c_vec, pars)
     )
     res <- do.call(CVXR::psolve, c(list(prob, solver = solver),
                                    solver_args))
-    if (!(res$status %in% c("optimal", "optimal_inaccurate"))) {
-      stop(sprintf("CVXR solver returned status: %s", res$status))
+    # CVXR >= 1.8 changed psolve()'s return value: it now yields the optimal
+    # objective value (a numeric scalar) and exposes the solution status and
+    # variable values through accessors on the problem/variable. Older CVXR
+    # (<= 1.0) returned a list carrying $status and a $getValue() closure.
+    if (is.atomic(res)) {
+      st    <- CVXR::status(prob)
+      w_val <- CVXR::value(w)
+    } else {
+      st    <- res$status
+      w_val <- res$getValue(w)
     }
-    val <- res$getValue(w)
-    val <- pmax(val, 0)
+    if (!(st %in% c("optimal", "optimal_inaccurate"))) {
+      stop(sprintf("CVXR solver returned status: %s", st))
+    }
+    val <- pmax(w_val, 0)
     val <- val / sum(val)
     as.matrix(val)
   }
