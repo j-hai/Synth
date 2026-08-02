@@ -254,7 +254,7 @@ function(
      }
 
     X0 <- split(X0, X0[,dim(X0)[2]])
-    X0 <- sapply(X0, apply, 2, mean, na.rm = TRUE, simplify = TRUE)
+    X0 <- sapply(X0, apply, 2, paste(predictors.op), na.rm = TRUE, simplify = TRUE)
     X0 <- as.matrix(X0[-dim(X0)[1],])
     
     
