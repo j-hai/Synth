@@ -118,9 +118,12 @@ function(
         # foo is sorted by unit below, so X0, Z0 and Y0plot hold the controls
         # in ascending unit order; put the identifiers in that order too so
         # that labels line up with the data
-         co.order <- order(controls.identifier)
-         controls.identifier      <- controls.identifier[co.order]
-         controls.identifier.name <- controls.identifier.name[co.order]
+         co.order <- order(as.numeric(as.character(unlist(controls.identifier))))
+         if(!identical(co.order, seq_along(co.order)))
+          {
+           controls.identifier      <- controls.identifier[co.order]
+           controls.identifier.name <- controls.identifier.name[co.order]
+          }
 
         # sort first by unit, then by time variable
          foo[,time.variable] <- as.numeric(as.character(foo[,time.variable]))
@@ -166,9 +169,14 @@ function(
 
      # foo is sorted by time, so rows come out in ascending time order;
      # sort the periods too so that row labels line up with the data
-      time.predictors.prior <- sort(time.predictors.prior, na.last = TRUE)
-      time.optimize.ssr     <- sort(time.optimize.ssr, na.last = TRUE)
-      time.plot             <- sort(time.plot, na.last = TRUE)
+      sort.periods <- function(x)
+       {
+        o <- order(as.numeric(as.character(x)))
+        if(identical(o, seq_along(o))) x else x[o]
+       }
+      time.predictors.prior <- sort.periods(time.predictors.prior)
+      time.optimize.ssr     <- sort.periods(time.optimize.ssr)
+      time.plot             <- sort.periods(time.plot)
 
      # get time rows
      time.predictors.prior.rows <-

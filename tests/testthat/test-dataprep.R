@@ -184,3 +184,34 @@ test_that("period labels follow the data when periods are unsorted", {
     "control unit: 13 ; predictor: X2 ; for period: 1984"
   )
 })
+
+test_that("identifiers given as factors or lists are ordered by value", {
+  ref <- toy_dataprep()
+
+  # factor levels sort as text ("13" < "17" < "2"), which is not unit order
+  for (ids in list(c(2, 13, 17, 29, 32, 38), c(29, 2, 13, 17, 32, 38))) {
+    d <- toy_dataprep(controls = factor(as.character(ids)))
+    expect_identical(colnames(d$Z0), colnames(ref$Z0))
+    expect_labels_match_data(d)
+    expect_equal(d$names.and.numbers$unit.names, ref$names.and.numbers$unit.names)
+
+    d <- toy_dataprep(controls = as.list(ids))
+    expect_identical(colnames(d$Z0), colnames(ref$Z0))
+    expect_labels_match_data(d)
+  }
+
+  # periods 5..17 as a factor: levels sort "10" "11" ... "5" "6"
+  shifted <- transform(synth.data, year = year - 1979)
+  d <- dataprep(foo = shifted, predictors = c("X2", "X3"), dependent = "Y",
+                unit.variable = "unit.num", time.variable = "year",
+                treatment.identifier = 7,
+                controls.identifier = c(2, 13, 17, 29, 32, 38),
+                time.predictors.prior = 5:10,
+                time.optimize.ssr = factor(as.character(5:11)),
+                time.plot = factor(as.character(5:17)))
+  expect_identical(rownames(d$Z1), as.character(5:11))
+  expect_identical(rownames(d$Y1plot), as.character(5:17))
+  expect_equal(unname(d$Z1[, 1]),
+               synth.data$Y[synth.data$unit.num == 7 &
+                              synth.data$year %in% 1984:1990])
+})
