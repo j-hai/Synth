@@ -114,7 +114,14 @@ function(
          
         if(sum(duplicated(c(controls.identifier.name,treatment.identifier.name))) > 0)
          {stop("\n duplicate unit.variable.names across units\n")}
-         
+
+        # foo is sorted by unit below, so X0, Z0 and Y0plot hold the controls
+        # in ascending unit order; put the identifiers in that order too so
+        # that labels line up with the data
+         co.order <- order(controls.identifier)
+         controls.identifier      <- controls.identifier[co.order]
+         controls.identifier.name <- controls.identifier.name[co.order]
+
         # sort first by unit, then by time variable
          foo[,time.variable] <- as.numeric(as.character(foo[,time.variable]))
          foo[,unit.variable] <- as.numeric(as.character(foo[,unit.variable]))
@@ -156,7 +163,13 @@ function(
            stop(paste("\n time period ",p," from time.",names(t.list[i])," not found in time.variable\n",sep=""))
          }
         }
-     
+
+     # foo is sorted by time, so rows come out in ascending time order;
+     # sort the periods too so that row labels line up with the data
+      time.predictors.prior <- sort(time.predictors.prior, na.last = TRUE)
+      time.optimize.ssr     <- sort(time.optimize.ssr, na.last = TRUE)
+      time.plot             <- sort(time.plot, na.last = TRUE)
+
      # get time rows
      time.predictors.prior.rows <-
       which(foo[,time.variable] %in% time.predictors.prior)

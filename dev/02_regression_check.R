@@ -32,6 +32,26 @@ expected_diffs <- list(
   # filled in as Phase 2 fixes land
 )
 
+# Individual paths known to differ from 1.1-9 due to intentional fixes.
+# 1.2-0: synth.tab() lines unit names/numbers up with the weights; 1.1-9
+# listed them in controls.identifier order (29, 2, 13, 17, ...). These two
+# paths are left out of the comparison only if the new labels check out
+# (see tab_w_labels_ok below), so the rest of the scenario is still compared.
+expected_paths <- c(
+  "s1_toy_panel$tab_w$unit.names",
+  "s1_toy_panel$tab_w$unit.numbers"
+)
+
+# TRUE if every row of the current tab.w carries its own unit number and
+# the name that 1.1-9 paired with that number.
+tab_w_labels_ok <- function(cur, base) {
+  !is.null(cur) && !is.null(base) &&
+    identical(as.numeric(cur$unit.numbers), as.numeric(rownames(cur))) &&
+    identical(as.character(cur$unit.names),
+              as.character(base$unit.names)[match(cur$unit.numbers,
+                                                  base$unit.numbers)])
+}
+
 # ---- locate paths -----------------------------------------------------------
 pkg_root <- getwd()
 stopifnot(file.exists(file.path(pkg_root, "DESCRIPTION")))
@@ -201,6 +221,7 @@ cat("Comparing", length(current), "scenarios:\n\n")
 unexpected <- 0L
 expected_changed <- 0L
 ok <- 0L
+waived <- 0L
 for (nm in names(baseline)) {
   if (!nm %in% names(current)) {
     cat(sprintf("  [MISSING] %s\n", nm))
@@ -208,6 +229,14 @@ for (nm in names(baseline)) {
     next
   }
   diffs <- compare_one(current[[nm]], baseline[[nm]], path = nm)
+  is_expected <- sub(":.*$", "", diffs) %in% expected_paths
+  if (any(is_expected) &&
+      tab_w_labels_ok(current[[nm]]$tab_w, baseline[[nm]]$tab_w)) {
+    for (d in diffs[is_expected])
+      cat(sprintf("  [expected path, labels verified] %s\n", d))
+    waived <- waived + sum(is_expected)
+    diffs <- diffs[!is_expected]
+  }
   if (length(diffs) == 0L) {
     cat(sprintf("  [OK]      %s\n", nm)); ok <- ok + 1L
   } else if (nm %in% names(expected_diffs)) {
@@ -221,7 +250,7 @@ for (nm in names(baseline)) {
   }
 }
 
-cat(sprintf("\nSummary: %d ok, %d expected-changed, %d unexpected\n",
-            ok, expected_changed, unexpected))
+cat(sprintf("\nSummary: %d ok, %d expected-changed, %d unexpected (%d expected paths waived)\n",
+            ok, expected_changed, unexpected, waived))
 if (unexpected > 0L) quit(save = "no", status = 1L)
 quit(save = "no", status = 0L)
