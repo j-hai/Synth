@@ -1,4 +1,4 @@
-test_that("synth_data() with auto-controls reproduces a hand-built dataprep on basque", {
+test_that("synth_data() with explicit controls reproduces a hand-built dataprep on basque", {
   data(basque)
   manual <- dataprep(
     foo                  = basque,

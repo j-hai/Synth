@@ -49,6 +49,8 @@ RNGkind("Mersenne-Twister", "Inversion", "Rejection")
 scenarios <- list()
 
 # Scenario 1: canonical toy panel from dataprep()/synth() Rd example -------
+# As shipped in 1.1-9 (special predictor Y in 1991). The current Rd example
+# and test fixture use Y in 1990; keep 1991 here to match the frozen baseline.
 {
   data(synth.data)
   dataprep.out <- dataprep(

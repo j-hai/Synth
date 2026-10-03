@@ -2,9 +2,10 @@
 
 data(synth.data, package = "Synth", envir = environment())
 
-# A canonical dataprep object — matches s1_toy_panel from
-# dev/01_capture_baseline.R so changes here are caught by the regression
-# script as well.
+# A canonical dataprep object — the toy-panel example from ?synth and
+# ?dataprep. It differs from s1_toy_panel in dev/01_capture_baseline.R in
+# one special predictor: the frozen 1.1-9 baseline uses Y in 1991 (the
+# first post-treatment year); here and in the docs it is Y in 1990.
 make_dataprep <- function() {
   dataprep(
     foo = synth.data,
@@ -14,7 +15,7 @@ make_dataprep <- function() {
     unit.variable = "unit.num",
     time.variable = "year",
     special.predictors = list(
-      list("Y", 1991, "mean"),
+      list("Y", 1990, "mean"),
       list("Y", 1985, "mean"),
       list("Y", 1980, "mean")
     ),

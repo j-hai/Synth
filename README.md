@@ -69,7 +69,7 @@ dataprep.out <- synth_data(
 synth.out <- synth(dataprep.out)
 
 # Inspect: donor weights and predictor balance
-synth.tab(synth.res = synth.out, dataprep.res = dataprep.out)
+print(synth.tab(synth.res = synth.out, dataprep.res = dataprep.out))
 
 # Plot the treated unit vs. its synthetic control
 path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
@@ -92,7 +92,7 @@ Montana (≈20%), and Connecticut (≈11%); `synth.tab()` reports the
 full weight vector and pre-period predictor balance.
 
 For placebo inference around this estimate, see
-`vignette("inference")`. The classic 12-argument `dataprep()`
+`vignette("inference")`. The classic 13-argument `dataprep()`
 interface still exists for advanced cases (per-predictor time
 windows, custom predictor matrices); see `?dataprep`. The
 Basque-country application from Abadie & Gardeazabal (2003) is
@@ -102,7 +102,7 @@ available via `data(basque)`.
 
 * **`synth_data()`** — one-line ergonomic wrapper around `dataprep()`
   for the common case (panel data frame + treated unit name + treatment
-  date). The 12-arg `dataprep()` is still there for advanced cases.
+  date). The 13-arg `dataprep()` is still there for advanced cases.
 * **`synth_inference()`** — split-conformal (Chernozhukov–Wuthrich–Zhu)
   and parametric Gaussian prediction intervals around the synthetic
   counterfactual. Returns an S3 object with `print()`, `plot()`, and
@@ -112,8 +112,8 @@ available via `data(basque)`.
   Abadie, Diamond, and Hainmueller (2010). Function names match those
   in the **SCtools** package by design; namespace-qualify if both are
   loaded.
-* **Optional alternative QP backends** — `quadopt = "cvxr"` (CVXR + OSQP by default)
-  and `quadopt = "torch"` (Frank-Wolfe simplex LS via the `torch`
+* **Optional alternative QP backends** — `quadopt = "cvxr"` (CVXR +
+  CLARABEL by default) and `quadopt = "torch"` (Frank-Wolfe simplex LS via the `torch`
   package, GPU/MPS-capable). Inner/outer split via `quadopt_inner` /
   `quadopt_outer` keeps V-search at ipop's speed when only the final W
   needs the modern solver.
@@ -145,12 +145,12 @@ See [`NEWS.md`](NEWS.md) for the full change log.
 * `quadopt = "LowRankQP"` (long deprecated) now errors fast instead of
   printing a message and crashing in undefined-variable code a few
   lines later.
-* `path.plot()` and `gaps.plot()` `Ylim` now pads by a fraction of the
+* `path.plot()` `Ylim` now pads by a fraction of the
   data range, so plots of negative-valued series are no longer cropped
   at the bottom.
 * `dataprep()`: the missing-data warning loop in the X0 (control
   predictors) section now iterates over all rows of X0 (it previously
-  only covered the first time period for each control).
+  only covered the first `length(predictors)` rows).
 * Several typos fixed in error/warning messages.
 
 ## License

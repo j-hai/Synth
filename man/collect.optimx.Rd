@@ -14,7 +14,7 @@ collect.optimx(res, opt = "min")
 Output from a call to optimx().
 }
   \item{opt}{
-Either "min" or "max" to extract results for he methods that obtained the minimum or maximum function value 
+Either "min" or "max" to extract results for the methods that obtained the minimum or maximum function value 
 across the methods.
 }
 }

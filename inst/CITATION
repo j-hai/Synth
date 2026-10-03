@@ -3,9 +3,9 @@ citHeader("To cite Synth in publications use:")
 bibentry(bibtype = "Article",
   title        = "Synth: An R Package for Synthetic Control Methods in Comparative Case Studies",
 author = c(
-       person(c("Jens", "Hainmueller", role = c("aut","cre"))),
-       person(c("Alexis", "Diamond", role = c("aut"))),
-       person(c("Alberto", "Abadie", role = c("aut")))
+       person("Alberto", "Abadie"),
+       person("Alexis", "Diamond"),
+       person("Jens", "Hainmueller")
 ),
   journal      = "Journal of Statistical Software",
   year         = "2011",

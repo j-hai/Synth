@@ -38,7 +38,7 @@ generate_placebos(synth.res = NULL,
   \item{n_cores}{Number of cores when \code{parallel = TRUE}. Defaults to one less than the number of physical cores.}
   \item{quadopt, quadopt_inner, quadopt_outer, cvxr_pars, cvxr_pars_inner, cvxr_pars_outer, torch_pars, torch_pars_inner, torch_pars_outer}{Forwarded to each placebo refit's \code{\link{synth}} call. Match these to the configuration that produced \code{synth.res} for like-for-like inference. See \code{\link{synth}} for the inner/outer split semantics.}
   \item{genoud}{Forwarded to each placebo refit's \code{\link{synth}} call. Set to \code{TRUE} when the original fit used genoud, so placebos use the same optimizer.}
-  \item{treatment_time}{Optional first post-treatment period. Defaults to \code{max(dataprep.res$tag$time.optimize.ssr) + 1}. Pre-treatment plot years before the SSR optimization window are excluded from post-period MSPE so they cannot inflate placebo p-values.}
+  \item{treatment_time}{Optional first post-treatment period. Defaults to the \code{treatment_time} stored by \code{\link{synth_data}} when \code{dataprep.res} was built with it, otherwise to \code{max(dataprep.res$tag$time.optimize.ssr) + 1}. Pre-treatment plot years before the SSR optimization window are excluded from post-period MSPE so they cannot inflate placebo p-values.}
   \item{keep_fits}{If \code{TRUE}, store the full \code{\link{synth}} return value (with \code{solution.w}, \code{solution.v}, etc.) on each placebo entry under the \code{fit} field. Default \code{FALSE} keeps the output light by storing only the gap series and MSPE summaries.}
 }
 \details{

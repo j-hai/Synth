@@ -9,7 +9,8 @@
   `time.optimize.ssr = 1960:1969`) into the post-period denominator,
   inflating `post_mspe`, `mspe_ratio`, and the `mspe_test()` p-value.
   Both now classify post as `time.plot >= treatment_time`, with the
-  default `treatment_time = max(time.optimize.ssr) + 1`. A new
+  default `treatment_time = max(time.optimize.ssr) + 1` (or the value
+  passed to `synth_data()`, when the inputs were built with it). A new
   `treatment_time` argument lets users override.
 
 * `synth_inference(method = "conformal")` now uses the order statistic
@@ -20,6 +21,30 @@
   and slightly under-covers. When `n` is too small for the requested
   coverage, the function now warns and returns `Inf` for
   `conformal_q` instead of silently using the maximum residual.
+
+## Bug fixes (also present in 1.1-10 and earlier)
+
+* `dataprep()` labeled control units in the order they were listed in
+  `controls.identifier`, while the data are always arranged in
+  ascending order of unit number. With an unsorted
+  `controls.identifier` (as in the toy `synth.data` example,
+  `c(29, 2, 13, 17, 32, 38)`) the column names of `Z0` and `Y0plot`,
+  and of `X0` when fewer than two regular predictors were supplied,
+  therefore named the wrong units, and `synth.tab()$tab.w` printed
+  weights next to other units' names and numbers (four of the six
+  controls in the toy example). `dataprep()` now lists the controls
+  in ascending order of unit number in `names.and.numbers` (after the
+  treated unit) and in `tag$controls.identifier`, so labels follow
+  the data, and `synth.tab()` matches names to weights by unit number.
+  Likewise, `time.optimize.ssr` and `time.plot` supplied out of order
+  produced row labels (and a plotting axis) that did not follow the
+  data, and an out-of-order `time.predictors.prior` made the
+  missing-data messages name the wrong period; all three are now
+  sorted. The fitted weights and losses were always computed by
+  position and do not change (only their labels do), and nothing
+  changes for input that was already in ascending order. Objects
+  created by `dataprep()` in 1.1-10 or earlier with unsorted controls
+  or periods keep their old labels and should be re-created.
 
 ## New arguments wired through `synth()` and `generate_placebos()`
 
@@ -42,7 +67,8 @@
     * `method = "conformal"` (default) — split-conformal intervals
       (Chernozhukov, Wuthrich, Zhu 2021), finite-sample valid under
       exchangeability of pre-period residuals. Half-width is the
-      `(1 - alpha)`-quantile of `|gap_pre|`.
+      order statistic of `|gap_pre|` at rank
+      `ceiling((n + 1) * (1 - alpha))`.
     * `method = "parametric"` — Gaussian-residual intervals.
       Half-width is `qnorm(1 - alpha/2) * sd(gap_pre)`.
 
@@ -56,8 +82,8 @@
   treated slot, refits `synth()`, and returns a `synth_placebos` object.
   `mspe_test()` returns a one-sided p-value via the empirical rank of
   the treated unit's post/pre MSPE ratio. The function names match
-  those in the `SCtools` package by design — migration is a verbatim
-  rename and you can namespace-qualify (e.g., `Synth::generate_placebos`)
+  those in the `SCtools` package by design, but the arguments differ;
+  you can namespace-qualify (e.g., `Synth::generate_placebos`)
   if both packages are loaded.
 
 * No new package dependencies. Optional `parallel = TRUE` in
@@ -79,11 +105,11 @@
 * `synth()` and `fn.V()` gain two new opt-in values for `quadopt`:
 
     * `quadopt = "cvxr"` solves the W-step via the `CVXR` package
-      (default solver: OSQP, a hard `Imports` of CVXR and therefore
-      always available; alternative solvers `"SCS"`, `"ECOS"`, or
-      `"MOSEK"` can be selected via `cvxr_pars`). Adds no required
-      dependency; `CVXR` lives in `Suggests:` and is loaded only when
-      requested.
+      (default solver: CLARABEL, a hard `Imports` of CVXR and
+      therefore always available; alternative solvers `"OSQP"`,
+      `"SCS"`, `"ECOS"`, or `"MOSEK"` can be selected via
+      `cvxr_pars`). Adds no required dependency; `CVXR` lives in
+      `Suggests:` and is loaded only when requested.
     * `quadopt = "torch"` solves the W-step via Frank-Wolfe simplex
       least squares using the `torch` package, with optional GPU/MPS
       support (`torch_pars = list(device = "cuda")` or `"mps"`). Also
@@ -94,7 +120,7 @@
   to `<= 1.1-10`. The new backends agree with ipop on the canonical
   examples to within solver tolerance and exist for users with larger
   panels who prefer modern convex-optimization solvers (CVXR) or
-  autodiff/GPU machinery (torch). See the `?synth` Details section
+  autodiff/GPU machinery (torch). See the `quadopt` argument in `?synth`
   and the inference vignette for guidance on choosing a backend.
 
 * New `quadopt_inner` and `quadopt_outer` arguments on `synth()` and
@@ -112,7 +138,30 @@
 * This release introduces S3 method dispatch (`print`, `plot`) for the
   new `synth_inference` and `synth_placebos` classes. Existing
   functions (`synth`, `dataprep`, `path.plot`, `gaps.plot`,
-  `synth.tab`, etc.) are unchanged in behavior and signature.
+  `synth.tab`, etc.) are not S3 generics and are unaffected by this.
+
+## Documentation
+
+* `?synth` and `?dataprep`: the toy `synth.data` example no longer
+  matches on a post-treatment outcome. The special predictor
+  `list("Y", 1991, "mean")` is now `list("Y", 1990, "mean")`; with
+  `time.optimize.ssr = 1984:1990`, 1991 is the first post-treatment
+  year. The shared test fixture in `tests/testthat/setup.R` was
+  updated to match. Thanks to Alexis Diamond for spotting this.
+
+* `?synth`, `?fn.V`, the README, and the inference vignette named
+  OSQP as the default solver for `quadopt = "cvxr"`; the default is
+  CLARABEL.
+
+* The help pages, README, vignettes, and this file were checked
+  against the code and data, and statements that did not match were
+  corrected. Among them: `Sigf.ipop` defaults to 5, not 7; `...` in
+  `synth()` is not passed on to `optimx` or `genoud`; `?synth.tab`
+  now documents `tab.pred`; `?basque` and `?synth.data` list the
+  right variables and units; the `?synth_inference` example uses an
+  `alpha` for which the conformal band is finite; and
+  `citation("Synth")` now renders the authors correctly (the
+  `person()` calls were malformed).
 
 # Synth 1.1-10
 
@@ -126,8 +175,7 @@
 * `dataprep()`: the missing-data warning loop in the X0 (control
   predictors) section now iterates over `nrow(X0)` instead of
   `nrow(X1)`. Previously it covered only the first
-  `length(time.predictors.prior)` rows, missing roughly
-  `(n_controls - 1) / n_controls` of the cells.
+  `length(predictors)` rows, missing most of the cells.
 
 * `synth()`: the error message for `ncol(Z0) < 2` no longer mentions
   "specify only one treated unit" (it is checking for at least two

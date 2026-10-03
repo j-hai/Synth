@@ -18,7 +18,7 @@ A usual sequence of commands to implement the synthetic control method is to fir
 
 An example of this sequence is provided in the documentation to \code{\link{dataprep}}. This procedure is strongly recommended. Alternatively, the user may provide their own preprocessed data matrices and load them into \code{\link{synth}} via the X0, X1, Z1, and Z0 arguments. In this case, no \code{data.prep.obj} should be specified.
 
-The output from \code{\link{synth}} is a list object that contains the weights on predictors (\code{solution.V}) and weights on control units (\code{solution.W}) that define contributions to the synthetic control unit.
+The output from \code{\link{synth}} is a list object that contains the weights on predictors (\code{solution.v}) and weights on control units (\code{solution.w}) that define contributions to the synthetic control unit.
 }
 \usage{
 synth(data.prep.obj = NULL,
@@ -49,7 +49,7 @@ The object produced by \code{\link{dataprep}}. This object contains all informat
   \item{Z1}{Matrix of treated outcome data for the pre-treatment periods over which MSPE is minimized.}
   \item{Z0}{Matrix of control units’ outcome data for the pre-treatment periods over which MSPE is minimized.}
   \item{custom.v}{
-Vector of weights for predictors supplied by the user. Uses \code{synth} to bypass optimization for \code{solution.V}. See Details.
+Vector of weights for predictors supplied by the user. Uses \code{synth} to bypass optimization for \code{solution.v}. See Details.
 }
   \item{optimxmethod}{
 Character vector specifying optimization algorithms to be used. Permissible values are all optimization algorithms currently implemented in the function \code{\link[optimx:optimx]{optimx}} (see that function for details). If multiple algorithms are specified, \code{\link{synth}} will run all chosen algorithms and return the best-performing result. If \code{"All"} is specified, all algorithms in \code{\link[optimx:optimx]{optimx}} are tried.
@@ -58,7 +58,7 @@ Character vector specifying optimization algorithms to be used. Permissible valu
 Logical flag. If \code{TRUE}, \code{\link{synth}} performs a two-step optimization. In the first step, \code{\link[rgenoud:genoud]{genoud}} is used to obtain a global solution. In the second step, the results are passed to the algorithm(s) chosen in \code{optimxmethod} for local optimization. This two-step procedure is slower but may yield lower loss for irregular search spaces.
 }
   \item{quadopt}{
-Character specifying the routine for quadratic optimization over W weights. One of \code{"ipop"} (default; \code{\link[kernlab:ipop]{ipop}} from \pkg{kernlab}, behavior unchanged from earlier versions of \pkg{Synth}), \code{"cvxr"} (CVXR with OSQP as the default solver; requires the \pkg{CVXR} package, in \code{Suggests:}), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package, also in \code{Suggests:}; supports CPU, CUDA, and Apple MPS via \code{torch_pars}). The two new backends are opt-in for users with larger panels or who prefer modern convex-optimization or autodiff/GPU machinery; on small panels they agree with ipop to within solver tolerance.
+Character specifying the routine for quadratic optimization over W weights. One of \code{"ipop"} (default; \code{\link[kernlab:ipop]{ipop}} from \pkg{kernlab}, behavior unchanged from earlier versions of \pkg{Synth}), \code{"cvxr"} (CVXR with CLARABEL as the default solver; requires the \pkg{CVXR} package, in \code{Suggests:}), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package, also in \code{Suggests:}; supports CPU, CUDA, and Apple MPS via \code{torch_pars}). The two new backends are opt-in for users with larger panels or who prefer modern convex-optimization or autodiff/GPU machinery; on small panels they agree with ipop to within solver tolerance.
 
 When \code{quadopt} alone is specified it applies to both the inner and outer QP solves. To use different backends for the two stages — e.g. fast \code{ipop} for the V-search loop and a modern solver only for the final W solve — use \code{quadopt_inner} and \code{quadopt_outer} below.
 }
@@ -69,30 +69,30 @@ Optional character. If non-\code{NULL}, overrides \code{quadopt} for the QP solv
 Optional character. If non-\code{NULL}, overrides \code{quadopt} for the final W solve once V is fixed. Defaults to \code{NULL}, which means "inherit \code{quadopt}". The common pattern is \code{quadopt_outer = "cvxr"} (or \code{"torch"}) with \code{quadopt} left at \code{"ipop"}: V-search runs at ipop's speed and only the final W is solved with the modern backend.
 }
   \item{cvxr_pars}{
-Optional named list of tuning parameters forwarded to the CVXR backend when \code{quadopt} or \code{quadopt_outer} is \code{"cvxr"}. Recognized fields: \code{solver} (default \code{"OSQP"}, a hard CVXR dependency that ships everywhere CVXR does; other CVXR-supported solvers like \code{"SCS"}, \code{"ECOS"} (requires \pkg{ECOSolveR}), or \code{"MOSEK"} (requires a MOSEK license) can be passed), \code{eps} (default \code{1e-8}), and \code{max_iter} (default \code{5000}). The generic \code{eps} and \code{max_iter} are translated to whichever parameter names the chosen solver expects.
+Optional named list of tuning parameters forwarded to the CVXR backend when \code{quadopt} or \code{quadopt_outer} is \code{"cvxr"}. Recognized fields: \code{solver} (default \code{"CLARABEL"}, an interior-point solver that is a hard CVXR dependency and so ships everywhere CVXR does; other CVXR-supported solvers like \code{"OSQP"}, \code{"SCS"}, \code{"ECOS"} (requires \pkg{ECOSolveR}), or \code{"MOSEK"} (requires a MOSEK license) can be passed), \code{eps} (default \code{1e-8}), and \code{max_iter} (default \code{5000}). The generic \code{eps} and \code{max_iter} are translated to whichever parameter names the chosen solver expects.
 }
   \item{torch_pars}{
 Optional named list of tuning parameters forwarded to the torch backend when \code{quadopt} or \code{quadopt_outer} is \code{"torch"}. Recognized fields: \code{max_iter} (default \code{500}), \code{tol} (default \code{1e-8}), \code{device} (default \code{"cpu"}; pass \code{"cuda"} for NVIDIA GPU or \code{"mps"} for Apple Silicon), and \code{dtype} (\code{"float64"} default or \code{"float32"} for speed).
 }
   \item{cvxr_pars_inner, cvxr_pars_outer, torch_pars_inner, torch_pars_outer}{
-Optional per-stage overrides for backend tuning. Each defaults to \code{NULL}, in which case the matching master list (\code{cvxr_pars} or \code{torch_pars}) is used. The common pattern is to pass a tighter \code{*_outer} configuration (e.g.\ smaller \code{eps} or larger \code{max_iter}) for the single final W solve while leaving the V-search at lighter defaults.
+Optional per-stage overrides for backend tuning. Each defaults to \code{NULL}, in which case the matching master list (\code{cvxr_pars} or \code{torch_pars}) is used. The common pattern is to pass a tighter \code{*_outer} configuration (e.g. smaller \code{eps} or larger \code{max_iter}) for the single final W solve while leaving the V-search at lighter defaults.
 }
   \item{Margin.ipop}{
 Setting for the \code{ipop} optimization routine: how close we get to the constraints (see \code{\link[kernlab:ipop]{ipop}} for details).
 }
   \item{Sigf.ipop}{
-Setting for the \code{ipop} optimization routine: precision in significant figures (default: 7; see \code{\link[kernlab:ipop]{ipop}} for details).
+Setting for the \code{ipop} optimization routine: precision in significant figures (default: 5; see \code{\link[kernlab:ipop]{ipop}} for details).
 }
   \item{Bound.ipop}{
 Setting for the \code{ipop} optimization routine: clipping bound for variables (see \code{\link[kernlab:ipop]{ipop}} for details).
 }
   \item{verbose}{Logical flag. If \code{TRUE}, intermediate results are displayed.}
-  \item{\dots}{Additional arguments passed to \code{\link[optimx:optimx]{optimx}} or \code{\link[rgenoud:genoud]{genoud}}.}
+  \item{\dots}{Further arguments. Currently ignored: they are not passed on to \code{\link[optimx:optimx]{optimx}} or \code{\link[rgenoud:genoud]{genoud}}.}
 }
 \details{
 As proposed in Abadie and Gardeazabal (2003) and Abadie, Diamond, and Hainmueller (2010), \code{\link{synth}} searches for the set of weights that generate the best-fitting convex combination of control units. The predictor weight matrix V is chosen among positive definite diagonal matrices such that MSPE is minimized for the pre-intervention period.
 
-Alternatively, the user may supply a vector of V weights based on a subjective assessment of the predictive power of the variables in X1 and X0. In this case, specify \code{custom.V} in \code{\link{synth}}, and the optimization over V matrices is bypassed.
+Alternatively, the user may supply a vector of V weights based on a subjective assessment of the predictive power of the variables in X1 and X0. In this case, specify \code{custom.v} in \code{\link{synth}}, and the optimization over V matrices is bypassed.
 }
 \value{
   \item{solution.v}{Vector of predictor weights.}
@@ -125,7 +125,7 @@ dataprep.out <- dataprep(foo = synth.data,
    unit.variable = "unit.num",
    time.variable = "year",
    special.predictors = list(
-      list("Y",1991,"mean"),
+      list("Y",1990,"mean"),
       list("Y",1985,"mean"),
       list("Y",1980,"mean")),
    treatment.identifier = 7,
@@ -140,17 +140,18 @@ gaps.plot(dataprep.res = dataprep.out, synth.res = synth.out)
 }
 \dontrun{
 ## Alternative quadopt backends (Synth 1.2-0+; both in Suggests:).
-## Defaults to ipop. CVXR uses OSQP by default (a CVXR Imports, so
-## always available); pass cvxr_pars = list(solver = "SCS") or
-## "ECOS" (the latter needs ECOSolveR). Torch uses Frank-Wolfe
-## simplex least squares with exact line search and can run on
-## GPU/MPS via the device argument.
+## Defaults to ipop. CVXR uses CLARABEL by default (a CVXR Imports,
+## so always available); pass cvxr_pars = list(solver = "OSQP"),
+## "SCS" or "ECOS" (the latter needs ECOSolveR). Torch uses
+## Frank-Wolfe simplex least squares with exact line search and can
+## run on GPU/MPS via torch_pars = list(device = "cuda") or "mps".
 ##
-## On the Basque example all three backends produce essentially the
-## same synthetic control: identical pre-MSPE (0.0089), post-MSPE
-## within 0.001, and ATT estimates within 0.001 of each other. The
-## CVXR and torch backends are slower because they are invoked on
-## every fn.V() evaluation inside optimx's V-search.
+## The calls below reuse the toy dataprep.out from above. On the
+## Basque example (see ?dataprep) ipop and torch produce essentially
+## the same synthetic control: the same pre-MSPE to four decimals
+## (0.0089), with post-MSPE and ATT estimates within 0.001 of each
+## other. The CVXR and torch backends are slower because they are
+## invoked on every fn.V() evaluation inside optimx's V-search.
 
 # install.packages("CVXR")
 synth.cvxr <- synth(dataprep.out, quadopt = "cvxr")

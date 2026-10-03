@@ -10,7 +10,7 @@ and returns a \code{dataprep}-shaped list ready to pass to
 Defaults:
 \itemize{
 \item \code{controls = NULL} uses every panel unit other than the treated one.
-\item \code{predictors = NULL} fits the synthetic control on the outcome alone (via \code{special_predictors} or the implicit pre-period match).
+\item \code{predictors = NULL} relies entirely on \code{special_predictors}, which must then be non-empty.
 \item \code{plot_periods = NULL} uses the full panel range.
 \item \code{pre_periods = NULL} uses every panel time strictly before \code{treatment_time}.
 }
@@ -50,7 +50,7 @@ synth_data(panel,
 \examples{
 \dontrun{
 data(basque)
-# Equivalent to the long dataprep() example, in one call:
+# A simplified variant of the Basque example in ?dataprep, in one call:
 dp <- synth_data(
   panel              = basque,
   outcome            = "gdpcap",
