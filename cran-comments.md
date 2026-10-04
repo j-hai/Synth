@@ -36,16 +36,22 @@ since 2026-04-29).
   Labels now follow the data, and `synth.tab()` matches unit names to
   weights by unit number. Fitted weights and losses do not change;
   labels, the row order of `names.and.numbers` and the order of
-  `tag$controls.identifier` change, and only for input that was not
+  `tag$controls.identifier` and of the period vectors in `tag` change,
+  and only for input that was not
   already in ascending order.
 * `dataprep()` now stops with an explanatory message for a predictor
-  operator that cannot be used (for example `"range"`). These calls
-  already failed, with an unrelated-looking error.
-* `Depends:` is now R (>= 3.6.0); the previous R (>= 2.10) could not
-  be met by the code.
+  operator that cannot be used (for example `"range"`). None of
+  these calls gave a usable result before: most stopped with an
+  unrelated-looking error, and an operator that returns something
+  other than a number (for example `"toString"`) gave a non-numeric
+  `X1` that `synth()` then rejected.
+* `Depends: R (>= 3.6.0)` is new. 1.1-10 declared no minimum R
+  version; the new code needs R 3.6.0 (delayed S3 registration of the
+  `ggplot2::autoplot()` methods).
 
 With the default settings (`quadopt = "ipop"`, `predictors.op =
-"mean"`) and identifiers in ascending order, `dataprep()` and
+"mean"`) and unit identifiers and periods in ascending order,
+`dataprep()` and
 `synth()` return the same values as 1.1-10. This was checked by
 running both versions side by side over a grid of `dataprep()`
 configurations on the `synth.data` and `basque` examples.
@@ -76,12 +82,14 @@ against this version, on macOS (aarch64), R 4.4.2; see
 * `sccic` 0.1.1 (suggests Synth): `R CMD check` Status OK with both
   versions.
 * `MSCMT` 1.4.4 (suggests Synth): could not be built from source on
-  the local machine (no Fortran compiler), so the CRAN binary was
+  the local machine (no Fortran compiler), so the CRAN binary (the
+  R 4.5 build; CRAN's R 4.4 binary is still 1.4.1) was
   checked with `--install=skip`; same result with both versions.
 
 None of the three passes a predictor operator other than `"mean"` in
-its own code, examples, tests or vignettes. `SCtools` and `MSCMT`
-forward a user's operator to `dataprep()`, so their users see the
+its own code, examples, tests or vignettes. `SCtools` forwards a
+user's operator to `dataprep()`, and `MSCMT` (like `SCtools`) takes
+`dataprep()` objects the user created, so their users see the
 `predictors.op` change described above when they choose another
 operator.
 
@@ -91,6 +99,9 @@ operator.
   `dataprep`, `synth.tab`, `path.plot`, `gaps.plot`, `fn.V`,
   `spec.pred.func`, `collect.optimx`). `synth()` and `fn.V()` gain
   optional arguments whose defaults reproduce the 1.1-10 behaviour.
+  They are placed after the existing arguments (in `synth()`, after
+  `...`), so calls written for 1.1-10 that pass arguments by position
+  or abbreviate argument names keep working.
 * All return-list field names on `synth()` and `dataprep()` outputs.
 
 ### To do before submitting

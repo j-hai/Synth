@@ -18,8 +18,12 @@ the 1.1-10 submission (Synth 1.1-9 against 1.1-10, 2026-04-28).
 |:-------|:------|:-----|
 |Synth   |1.1-10 |1.2-0 |
 
-"old" is the CRAN release; "new" is the development version at the
-commit that added the predictor-operator checks.
+"old" is the CRAN release; "new" is the development version. All
+three packages were checked at commit 16febae; SCtools was checked
+again at the commit that restored the 1.1-10 argument order of
+`synth()`, with the same result. Since the startup message changed,
+the new message shows in the example and vignette output of SCtools
+and MSCMT.
 
 # Revdeps
 
@@ -53,8 +57,9 @@ versions; examples and test output identical. sccic only loads the
 ## MSCMT
 
 MSCMT could not be built from source on this machine (no Fortran
-compiler), so the install step was not exercised. The CRAN binary was
-checked with `R CMD check --install=skip`: one note ("information on
+compiler), so the install step was not exercised. The CRAN binary of 1.4.4
+built for R 4.5 (CRAN's R 4.4 binary is still 1.4.1) was checked
+under R 4.4.2 with `R CMD check --install=skip`: one note ("information on
 .o files is not available") with both versions; examples and vignette
 rebuild identical. The code in its vignette that calls Synth
 (`dataprep()`, `synth()`, `improveSynth()`) and `mscmt()` on a
@@ -63,7 +68,8 @@ rebuild identical. The code in its vignette that calls Synth
 ## Output that differs between old and new
 
 Only what NEWS.md announces: the order and labels of control units
-for input given out of ascending order, and the control predictor
-matrix when `predictors.op` is not `"mean"`. No reverse dependency
+and periods for input given out of ascending order, the control
+predictor matrix when `predictors.op` is not `"mean"`, the messages
+for operators that cannot be used, and the startup message. No reverse dependency
 uses an operator other than `"mean"` in its own code, examples, tests
 or vignettes.
