@@ -1,34 +1,33 @@
-\name{generate_placebos}
-\alias{generate_placebos}
+\name{synth_placebos}
+\alias{synth_placebos}
 \alias{print.synth_placebos}
-\alias{plot.synth_placebos}
 \title{In-space placebo refits for synthetic control inference}
 \description{
-For each donor in the original control pool, swap that donor into the treated slot, refit \code{\link{synth}}, and record the resulting gap series. The returned object feeds \code{\link{mspe_test}}, \code{\link{mspe_plot}}, and \code{\link{plot_placebos}}.
+For each donor in the original control pool, swap that donor into the treated slot, refit \code{\link{synth}}, and record the resulting gap series. The returned object feeds \code{\link{synth_mspe_test}}, \code{\link{synth_mspe_plot}}, and the \code{\link[=plot.synth_placebos]{plot}} method.
 }
 \usage{
-generate_placebos(synth.res = NULL,
-                  dataprep.res = NULL,
-                  Sigf.ipop = 5,
-                  Margin.ipop = 0.0005,
-                  Bound.ipop = 10,
-                  optimxmethod = c("Nelder-Mead", "BFGS"),
-                  genoud = FALSE,
-                  custom.v = NULL,
-                  verbose = FALSE,
-                  parallel = FALSE,
-                  n_cores = NULL,
-                  quadopt = "ipop",
-                  quadopt_inner = NULL,
-                  quadopt_outer = NULL,
-                  cvxr_pars = list(),
-                  cvxr_pars_inner = NULL,
-                  cvxr_pars_outer = NULL,
-                  torch_pars = list(),
-                  torch_pars_inner = NULL,
-                  torch_pars_outer = NULL,
-                  treatment_time = NULL,
-                  keep_fits = FALSE)
+synth_placebos(synth.res = NULL,
+               dataprep.res = NULL,
+               Sigf.ipop = 5,
+               Margin.ipop = 0.0005,
+               Bound.ipop = 10,
+               optimxmethod = c("Nelder-Mead", "BFGS"),
+               genoud = FALSE,
+               custom.v = NULL,
+               verbose = FALSE,
+               parallel = FALSE,
+               n_cores = NULL,
+               quadopt = "ipop",
+               quadopt_inner = NULL,
+               quadopt_outer = NULL,
+               cvxr_pars = list(),
+               cvxr_pars_inner = NULL,
+               cvxr_pars_outer = NULL,
+               torch_pars = list(),
+               torch_pars_inner = NULL,
+               torch_pars_outer = NULL,
+               treatment_time = NULL,
+               keep_fits = FALSE)
 }
 \arguments{
   \item{synth.res}{Output list from \code{\link{synth}} for the real treated unit. Used only for the reference summary; placebos are refit from \code{dataprep.res}.}
@@ -52,6 +51,7 @@ An object of class \code{synth_placebos}, a list with components:
   \item{placebos}{Named list of length \code{ncol(dataprep.res$X0)}; each element has the same shape as \code{treated} plus a \code{failed} flag and an \code{error_message} (\code{NA} on success, the captured \code{conditionMessage(e)} on \code{tryCatch} failure). When \code{keep_fits = TRUE} the entry also has a \code{fit} field carrying the full \code{\link{synth}} return value for that donor.}
   \item{time}{Plot horizon, equal to \code{dataprep.res$tag$time.plot}.}
   \item{pre_idx, post_idx}{Integer indices into \code{time}.}
+  \item{treatment_time}{First post-treatment period, used to define \code{post_idx}.}
   \item{donor_names}{Character vector of donor labels.}
   \item{failed}{Logical vector aligned with \code{donor_names}.}
 }
@@ -60,9 +60,9 @@ Abadie, A., Diamond, A., and Hainmueller, J. (2010). Synthetic Control Methods f
 }
 \author{Jens Hainmueller and Alexis Diamond}
 \note{
-The function names \code{generate_placebos}, \code{mspe_test}, \code{mspe_plot}, and \code{plot_placebos} match those in the \pkg{SCtools} package by design. If both packages are loaded, namespace-qualify (e.g., \code{Synth::generate_placebos}).
+Development versions of \pkg{Synth} 1.2-0 called these functions \code{generate_placebos}, \code{mspe_test}, \code{mspe_plot}, and \code{plot_placebos}. Those are also the names of functions in the \pkg{SCtools} package, which take different arguments, so attaching both packages made one set mask the other. The functions here are now \code{synth_placebos}, \code{synth_mspe_test}, \code{synth_mspe_plot}, and the \code{plot} method for \code{synth_placebos} objects.
 }
-\seealso{\code{\link{mspe_test}}, \code{\link{mspe_plot}}, \code{\link{plot_placebos}}, \code{\link{synth_inference}}.}
+\seealso{\code{\link{synth_mspe_test}}, \code{\link{synth_mspe_plot}}, \code{\link{plot.synth_placebos}}, \code{\link{synth_inference}}.}
 \examples{
 \dontrun{
 data(synth.data)
@@ -81,9 +81,9 @@ d <- dataprep(
   time.plot = 1984:1996
 )
 fit <- synth(d)
-pl <- generate_placebos(fit, d)
+pl <- synth_placebos(fit, d)
 print(pl)
-mspe_test(pl)$pvalue
-plot_placebos(pl)
+synth_mspe_test(pl)$pvalue
+plot(pl)
 }
 }

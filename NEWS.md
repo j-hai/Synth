@@ -2,16 +2,17 @@
 
 ## Bug fixes (vs the unreleased 1.2-0 RC1 from earlier in this development cycle)
 
-* `synth_inference()` and `generate_placebos()` previously classified
-  any plot-horizon year not in `time.optimize.ssr` as post-treatment.
+* `synth_inference()` and `synth_placebos()` (then called
+  `generate_placebos()`) previously classified any plot-horizon year
+  not in `time.optimize.ssr` as post-treatment.
   This silently mixed pre-treatment plot years before the SSR window
   (e.g. 1955-1959 in the Basque example with
   `time.optimize.ssr = 1960:1969`) into the post-period denominator,
-  inflating `post_mspe`, `mspe_ratio`, and the `mspe_test()` p-value.
-  Both now classify post as `time.plot >= treatment_time`, with the
-  default `treatment_time = max(time.optimize.ssr) + 1` (or the value
-  passed to `synth_data()`, when the inputs were built with it). A new
-  `treatment_time` argument lets users override.
+  inflating `post_mspe`, `mspe_ratio`, and the `synth_mspe_test()`
+  p-value. Both now classify post as `time.plot >= treatment_time`,
+  with the default `treatment_time = max(time.optimize.ssr) + 1` (or
+  the value passed to `synth_data()`, when the inputs were built with
+  it). A new `treatment_time` argument lets users override.
 
 * `synth_inference(method = "conformal")` now uses the order statistic
   at rank `k = ceiling((n + 1) * (1 - alpha))` instead of
@@ -23,6 +24,28 @@
   `conformal_q` instead of silently using the maximum residual.
 
 ## Bug fixes (also present in 1.1-10 and earlier)
+
+* `dataprep()` applied `predictors.op` to the treated unit only; the
+  control units' regular predictors were always averaged with the
+  mean. The operator is now applied to both. **This changes results
+  whenever `predictors.op` is not `"mean"`** (for example
+  `"median"`): `X0` differs wherever the operator and the mean
+  disagree, and the fitted weights can change with it. Nothing
+  changes for the default `predictors.op = "mean"`, and special
+  predictors were not affected. Functions in other packages that
+  take a `dataprep()` object (for example in `SCtools` and `MSCMT`)
+  see the same change.
+
+* `dataprep()` now checks `predictors.op`, and the operator of any
+  special predictor that spans more than one period, before using
+  it, and stops with a message that names the problem: the operator
+  is not a single character string, no function of that name is
+  found, the function cannot be called with `na.rm = TRUE`, it fails
+  when called, or it does not return a single number (as `"range"`
+  and `"quantile"` do not). These cases used to fail with
+  unrelated-looking errors such as "length of 'dimnames' [1] not
+  equal to array extent". Operators that return one number per
+  predictor and unit behave as before.
 
 * `dataprep()` labeled control units in the order they were listed in
   `controls.identifier`, while the data are always arranged in
@@ -46,7 +69,7 @@
   created by `dataprep()` in 1.1-10 or earlier with unsorted controls
   or periods keep their old labels and should be re-created.
 
-## New arguments wired through `synth()` and `generate_placebos()`
+## New arguments wired through `synth()` and `synth_placebos()`
 
 * `synth()` now accepts `cvxr_pars` and `torch_pars` lists for tuning
   the `quadopt = "cvxr"` and `quadopt = "torch"` backends (e.g.
@@ -54,7 +77,7 @@
   were supported internally by `.solve_w()` but were not previously
   exposed at the public API.
 
-* `generate_placebos()` now exposes `genoud`, `cvxr_pars`,
+* `synth_placebos()` now exposes `genoud`, `cvxr_pars`,
   `torch_pars`, and `treatment_time`. Match these to the configuration
   that produced the real fit so placebos use the same optimizer and
   the same post-period definition.
@@ -76,18 +99,26 @@
   with `print()` and `plot()` methods. The `plot()` method overlays the
   band on the treated and synthetic series.
 
-* `generate_placebos()`, `mspe_test()`, `mspe_plot()`, `plot_placebos()`
+* `synth_placebos()`, `synth_mspe_test()`, and `synth_mspe_plot()`
   implement the in-space placebo workflow from Abadie, Diamond, and
-  Hainmueller (2010). `generate_placebos()` swaps each donor into the
-  treated slot, refits `synth()`, and returns a `synth_placebos` object.
-  `mspe_test()` returns a one-sided p-value via the empirical rank of
-  the treated unit's post/pre MSPE ratio. The function names match
-  those in the `SCtools` package by design, but the arguments differ;
-  you can namespace-qualify (e.g., `Synth::generate_placebos`)
-  if both packages are loaded.
+  Hainmueller (2010). `synth_placebos()` swaps each donor into the
+  treated slot, refits `synth()`, and returns a `synth_placebos`
+  object with `print()` and `plot()` methods; the `plot()` method
+  draws the treated gap over the placebo gaps. `synth_mspe_test()`
+  returns a one-sided p-value via the empirical rank of the treated
+  unit's post/pre MSPE ratio.
+
+* Development versions of 1.2-0 called these functions
+  `generate_placebos()`, `mspe_test()`, `mspe_plot()`, and
+  `plot_placebos()`. Those are also the names of functions in the
+  `SCtools` package, which take different arguments, so attaching
+  both packages made one set mask the other and broke `SCtools`'
+  own examples. They were renamed before release; code written
+  against a development version needs `synth_placebos()`,
+  `synth_mspe_test()`, `synth_mspe_plot()`, and `plot()`.
 
 * No new package dependencies. Optional `parallel = TRUE` in
-  `generate_placebos()` uses `parallel::mclapply` on non-Windows.
+  `synth_placebos()` uses `parallel::mclapply` on non-Windows.
 
 ## Validity caveats
 
@@ -124,7 +155,7 @@
   and the inference vignette for guidance on choosing a backend.
 
 * New `quadopt_inner` and `quadopt_outer` arguments on `synth()` and
-  `generate_placebos()` let users pick different backends for the two
+  `synth_placebos()` let users pick different backends for the two
   QP stages. The V-search calls `fn.V()` hundreds of times via
   `optimx`; running CVXR or torch on every call is much slower than
   ipop. Setting `quadopt_outer = "cvxr"` (or `"torch"`) with `quadopt`

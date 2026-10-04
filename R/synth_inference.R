@@ -146,7 +146,7 @@ function(x, ...)
     else
       cat("i.i.d. Gaussian.\n")
     cat("With autocorrelated outcomes the nominal coverage is approximate.\n")
-    cat("See ?synth_inference, the SCtools package for placebo-based\n")
+    cat("See ?synth_inference, ?synth_placebos for placebo-based\n")
     cat("inference, and the scpi package for methods that decompose\n")
     cat("in-sample and out-of-sample uncertainty.\n")
     invisible(x)

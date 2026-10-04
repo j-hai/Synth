@@ -1,7 +1,7 @@
-test_that("generate_placebos() returns one placebo fit per donor", {
+test_that("synth_placebos() returns one placebo fit per donor", {
   d <- make_dataprep()
   fit <- synth(d, verbose = FALSE)
-  pl <- generate_placebos(fit, d, verbose = FALSE)
+  pl <- synth_placebos(fit, d, verbose = FALSE)
 
   expect_s3_class(pl, "synth_placebos")
   expect_equal(length(pl$placebos), ncol(d$X0))
@@ -20,12 +20,12 @@ test_that("generate_placebos() returns one placebo fit per donor", {
   expect_equal(pl$treated$mspe_ratio, inf$mspe_ratio)
 })
 
-test_that("mspe_test() p-value matches the empirical rank by construction", {
+test_that("synth_mspe_test() p-value matches the empirical rank by construction", {
   d <- make_dataprep()
   fit <- synth(d, verbose = FALSE)
-  pl <- generate_placebos(fit, d, verbose = FALSE)
+  pl <- synth_placebos(fit, d, verbose = FALSE)
   expect_equal(pl$treatment_time, 1991)
-  res <- mspe_test(pl)
+  res <- synth_mspe_test(pl)
 
   expect_named(res,
                c("mspe_ratio_treated", "mspe_ratios_placebos",
@@ -59,7 +59,7 @@ test_that("placebo donor swap is column-swap symmetric", {
 test_that("keep_fits = TRUE stores full synth() output per donor", {
   d <- make_dataprep()
   fit <- synth(d, verbose = FALSE)
-  pl <- generate_placebos(fit, d, verbose = FALSE, keep_fits = TRUE)
+  pl <- synth_placebos(fit, d, verbose = FALSE, keep_fits = TRUE)
 
   expect_true(all(vapply(pl$placebos, function(p) !is.null(p$fit), logical(1))))
   # Each fit should be a synth() return shape
@@ -71,7 +71,7 @@ test_that("keep_fits = TRUE stores full synth() output per donor", {
 test_that("error_message is NA on success and a captured message on failure", {
   d <- make_dataprep()
   fit <- synth(d, verbose = FALSE)
-  pl <- generate_placebos(fit, d, verbose = FALSE)
+  pl <- synth_placebos(fit, d, verbose = FALSE)
 
   ok <- !pl$failed
   expect_true(all(is.na(vapply(pl$placebos[ok],
@@ -84,31 +84,44 @@ test_that("error_message is NA on success and a captured message on failure", {
   }
 })
 
-test_that("plot/print/mspe_plot methods run without error", {
+test_that("plot, print and synth_mspe_plot() run without error", {
   d <- make_dataprep()
   fit <- synth(d, verbose = FALSE)
-  pl <- generate_placebos(fit, d, verbose = FALSE)
+  pl <- synth_placebos(fit, d, verbose = FALSE)
 
   expect_output(print(pl), "Synth placebos")
 
   pdf(NULL)
   on.exit(dev.off(), add = TRUE)
-  expect_silent(plot_placebos(pl))
   expect_silent(plot(pl))
-  expect_silent(mspe_plot(pl))
+  expect_silent(plot(pl, mspe_threshold = 5))
+  # the threshold reaches the body, and stray arguments are not swallowed
+  expect_error(plot(pl, mspe_threshold = "a"))
+  expect_warning(plot(pl, mspe_treshold = 5), "unused arguments ignored")
+  expect_warning(plot(pl, main = "x"), "Main")
+  expect_silent(synth_mspe_plot(pl))
 })
 
-test_that("generate_placebos() rejects malformed inputs", {
+test_that("synth_placebos() rejects malformed inputs", {
   d <- make_dataprep()
   fit <- synth(d, verbose = FALSE)
 
-  expect_error(generate_placebos(NULL, d),  "synth.res")
-  expect_error(generate_placebos(fit, NULL), "dataprep.res")
+  expect_error(synth_placebos(NULL, d),  "synth.res")
+  expect_error(synth_placebos(fit, NULL), "dataprep.res")
 
   # Single-donor pool — placebos are not meaningful
   d_one <- d
   d_one$X0     <- d_one$X0[, 1, drop = FALSE]
   d_one$Z0     <- d_one$Z0[, 1, drop = FALSE]
   d_one$Y0plot <- d_one$Y0plot[, 1, drop = FALSE]
-  expect_error(generate_placebos(fit, d_one), "at least 2 donors")
+  expect_error(synth_placebos(fit, d_one), "at least 2 donors")
+})
+
+test_that("names that clash with SCtools are not exported", {
+  exports <- getNamespaceExports("Synth")
+  expect_false(any(c("generate_placebos", "mspe_test", "mspe_plot",
+                     "plot_placebos") %in% exports))
+  expect_true(all(c("synth_placebos", "synth_mspe_test",
+                    "synth_mspe_plot") %in% exports))
+  expect_true(is.function(getS3method("plot", "synth_placebos")))
 })

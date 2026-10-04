@@ -43,6 +43,13 @@ function(
             , sep = ""), sep = "")
       }
 
+    # operator check (the operator is only used with more than one period)
+    if(length(list.object[[2]]) > 1)
+      {
+       sp.fun <- .predictor_op(list.object[[3]],
+                               paste("special predictor ", name.predictor, ": operator", sep = ""))
+      }
+
       X1.special <- as.matrix(foo.object[
                                        intersect(
                                                  special.units.tr,
@@ -78,7 +85,7 @@ function(
       {
        X1.special <- apply(X1.special,
                             2,
-                            paste(list.object[[3]]),
+                            sp.fun,
                             na.rm = TRUE
                             )
       }
@@ -126,7 +133,7 @@ function(
         X0.special <- apply(
                             X0.special,
                             2,
-                            paste(list.object[[3]]),
+                            sp.fun,
                             na.rm = TRUE
                             )
                             

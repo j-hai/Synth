@@ -23,7 +23,7 @@ The output of \code{\link{dataprep}} contains a list of matrices. This list obje
   \item{predictors}{A vector of column numbers or column-name character
     strings that identifies the predictors' columns. All predictors have to be numeric.}
   \item{predictors.op}{A character string identifying the method (operator) to be used
-    on the predictors.  Default is "mean". na.rm = T is hardwired into
+    on the predictors, for the treated and the control units alike.  Default is "mean". na.rm = T is hardwired into
     the code. See *Details*.}
   \item{special.predictors}{A list object identifying additional numeric predictors and their associated pre-treatment years and operators (analogous to
     ``predictors.op'' above).  See *Details*.}
@@ -33,7 +33,7 @@ The output of \code{\link{dataprep}} contains a list of matrices. This list obje
   \item{treatment.identifier}{A scalar identifying the ``unit.variable'' number or a character string
     giving the ``unit.name'' of the treated unit. If a character is supplied, a unit.names.variable also has to be supplied to identify the treated unit.}
   \item{controls.identifier }{ A vector identifying the ``unit.variable'' numbers or a vector of character strings giving the ``unit.name''s of control units. If a character is supplied, a unit.names.variable also has to be supplied to identify the control units. The order in which the control units are listed does not matter: the output always holds them in ascending order of their ``unit.variable'' number.}
-  \item{time.predictors.prior }{A numeric vector identifying the pretreatment periods over which the values for the outcome predictors should be averaged.}
+  \item{time.predictors.prior }{A numeric vector identifying the pretreatment periods over which the values of the predictors are aggregated with \code{predictors.op} (averaged, by default).}
   \item{time.optimize.ssr}{A numeric vector identifying the periods of the dependent variable over which the loss function 
 should be minimized (i.e. the periods over which mean squared prediction error (MSPE), that is the sum of squared residuals between treated and the synthetic control unit, are minimized).}
   \item{time.plot}{A vector identifying the periods over which results are to be plotted
@@ -43,7 +43,16 @@ should be minimized (i.e. the periods over which mean squared prediction error (
 }
 \details{ The predictors.op argument is a character string that provides a
   function (eg., "mean", "median", etc.) identifying the name of the
-  operator to be applied to the predictors over the given time period. 
+  operator to be applied to the predictors over the given time period.
+  The function is called as f(x, na.rm = TRUE) on one unit's values of
+  one predictor and has to return a single number. A function of your
+  own has to be defined at top level (or come from an attached
+  package), under a name that base R, Synth, and the packages Synth
+  imports do not already use. dataprep() stops with an explanatory
+  message if the name is not a single character string, no function of
+  that name is found, the function cannot be called with na.rm = TRUE,
+  or it returns anything other than one number (as "range" does, for
+  example).
 
   The special.predictors argument is a list object that contains one or
   more lists of length = 3.  The required components of each of these lists are:
@@ -51,7 +60,9 @@ should be minimized (i.e. the periods over which mean squared prediction error (
   (a) scalar column number or column-name character string associated with that predictor
   (b) vector of time-period number(s) desired (eg., 1998:2003)
   (c) character-string identifying the name of the operation 
-  to be applied (ie., "mean", "median", etc.)
+  to be applied (ie., "mean", "median", etc.). It is used, and checked
+  in the same way as predictors.op, only when (b) holds more than one
+  time period.
 
   eg.,
   special.predictors <- list(list(x1, 1985:1989, "mean"),
