@@ -118,7 +118,8 @@
   `synth_mspe_test()`, `synth_mspe_plot()`, and `plot()`.
 
 * No new package dependencies. Optional `parallel = TRUE` in
-  `synth_placebos()` uses `parallel::mclapply` on non-Windows.
+  `synth_placebos()` forks via `parallel::mclapply` on unix-likes
+  and uses a PSOCK cluster (`parallel::parLapply`) on Windows.
 
 ## Validity caveats
 
@@ -130,6 +131,30 @@
 * Conformal validity is exact under exchangeability of pre-period
   residuals; parametric validity assumes i.i.d. Gaussian residuals.
   Both are approximate when outcomes are autocorrelated.
+
+## New: `synth_data()`, the `smoking` data, and helper methods
+
+* `synth_data()` is a wrapper around `dataprep()` for the common case
+  of one treated unit and one treatment date. It takes a long panel
+  data frame, the treated unit, and `treatment_time` (the first
+  post-treatment period). By default the controls are all other
+  units, the pre-treatment periods are all periods before
+  `treatment_time`, and the plot horizon is every period in the
+  panel. It returns the same list as `dataprep()` and stores
+  `treatment_time`, which `synth_inference()` and `synth_placebos()`
+  then use as their default.
+
+* New dataset `smoking`: the state-level cigarette sales panel of
+  Abadie, Diamond, and Hainmueller (2010), 39 states from 1970 to
+  2000. The README and the inference vignette use it.
+
+* `as.data.frame()` methods for `synth_inference` and
+  `synth_placebos` objects, and `ggplot2::autoplot()` methods for
+  both, registered when `ggplot2` is loaded (`ggplot2` is in
+  `Suggests:`).
+
+* Two vignettes: `vignette("synth-quickstart")` and
+  `vignette("inference")`.
 
 ## Optional alternative QP backends
 
@@ -193,6 +218,9 @@
   `alpha` for which the conformal band is finite; and
   `citation("Synth")` now renders the authors correctly (the
   `person()` calls were malformed).
+
+* The startup message pointed to a web page that no longer exists; it
+  now points to the project page.
 
 # Synth 1.1-10
 

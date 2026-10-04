@@ -22,7 +22,7 @@
   \item{X0.inner}{NA}
   \item{X1.inner}{NA}
 }
-\details{NA
+\details{The third element of \code{list.object} names the operator. It is used only when the second element holds more than one period; it is then looked up and checked in the same way as \code{predictors.op} in \code{\link{dataprep}}, and applied to the treated and the control units alike. With a single period the values of that period are used as they are.
 }
 \value{NA
 }

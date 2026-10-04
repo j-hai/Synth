@@ -113,7 +113,7 @@ Abadie, A., and Gardeazabal, J. (2003). Economic Costs of Conflict: A Case Study
 }
 \author{Jens Hainmueller and Alexis Diamond}
 \seealso{
-\code{\link{dataprep}}, \code{\link{gaps.plot}}, \code{\link{path.plot}}, \code{\link{synth.tab}}
+\code{\link{dataprep}}, \code{\link{synth_data}}, \code{\link{gaps.plot}}, \code{\link{path.plot}}, \code{\link{synth.tab}}, \code{\link{synth_inference}}, \code{\link{synth_placebos}}
 }
 \examples{
 \donttest{
