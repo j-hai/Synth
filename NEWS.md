@@ -173,8 +173,9 @@
       require `torch::install_torch()` to download libtorch.
 
   `quadopt = "ipop"` remains the default and produces output identical
-  to `<= 1.1-10`. The new backends agree with ipop on the canonical
-  examples to within solver tolerance and exist for users with larger
+  to `<= 1.1-10`. The new backends reach the same objective as ipop to
+  within solver tolerance (the weights can differ when the problem
+  is nearly degenerate; see `?synth`) and exist for users with larger
   panels who prefer modern convex-optimization solvers (CVXR) or
   autodiff/GPU machinery (torch). See the `quadopt` argument in `?synth`
   and the inference vignette for guidance on choosing a backend.
@@ -221,6 +222,11 @@
 
 * The startup message pointed to a web page that no longer exists; it
   now points to the project page.
+
+* `DESCRIPTION` now requires R (>= 3.6.0). The stated minimum was
+  R 2.10, but the package registers `ggplot2::autoplot()` methods
+  with delayed S3 registration (R 3.6.0) and uses `isFALSE()` and
+  `startsWith()`.
 
 # Synth 1.1-10
 
