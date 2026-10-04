@@ -1,6 +1,6 @@
 \name{gaps.plot}
 \alias{gaps.plot}
-\title{Plots Gap in Outcome Trajectories between the Treated its Synthetic Control Unit}
+\title{Plots Gap in Outcome Trajectories between the Treated and its Synthetic Control Unit}
 \description{ This function plots the gaps in the trajectories of the outcome variable for the treated unit and the 
   synthetic control group constructed by \code{\link{synth}} and \code{\link{dataprep}}. The user can specify whether
   the whole time period or only the pre-treatment period should be plotted.
@@ -32,8 +32,6 @@
 
 Abadie, A., Diamond, A., Hainmueller, J. (2014). Comparative Politics and the Synthetic Control Method. \emph{American Journal of Political Science} 59(2): 495-510.
 
-Synthetic : An R Package for Synthetic Control Methods in Comparative Case Studies. \emph{Journal of Statistical Software} 42 (13) 1--17.
-       
 Abadie, A., Diamond, A., Hainmueller, J. (2011). Synth: An R Package for Synthetic Control Methods in Comparative Case Studies. \emph{Journal of Statistical Software} 42 (13) 1--17.
 
 Abadie A, Diamond A, Hainmueller J (2010). Synthetic Control Methods for Comparative Case Studies: Estimating the Effect of California's Tobacco Control Program. \emph{Journal of the American Statistical Association} 105 (490) 493--505.

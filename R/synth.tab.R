@@ -33,8 +33,13 @@ function(
     nmat     <-  dataprep.res$names.and.numbers[-which(
                                                        dataprep.res$names.and.numbers[,2]==treat.no)
                                                ,]
- 
- 
+
+    # line unit names up with the weights by unit number, not by position
+    w.ids <- rownames(synth.res$solution.w)
+    if(!is.null(w.ids) && nrow(nmat) == length(w.ids) &&
+       all(w.ids %in% as.character(nmat[,2])))
+     {nmat <- nmat[match(w.ids, as.character(nmat[,2])),]}
+
     tab.w           <- data.frame(
                                   round(synth.res$solution.w,round.digit),
                                   nmat

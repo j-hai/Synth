@@ -17,16 +17,15 @@ synth.tab(synth.res    = NA,
 }
 \details{NA}
 \value{
+  \item{tab.pred}{The matrix that compares the predictor values of the treated unit, the synthetic control unit, and the sample mean of the control units.}
   \item{tab.v}{The matrix that contains the table of V-weights and respective variable names.}
-  \item{tab.w}{The matrix that contains the table of W-weights and respective unit numbers and possibly names.}
+  \item{tab.w}{The data frame that contains the table of W-weights and respective unit numbers and possibly names.}
   \item{tab.loss}{The matrix that contains the table of W-loss and V-loss}
 }
 \references{
 
 Abadie, A., Diamond, A., Hainmueller, J. (2014). Comparative Politics and the Synthetic Control Method. \emph{American Journal of Political Science} 59(2): 495-510.
 
-Synthetic : An R Package for Synthetic Control Methods in Comparative Case Studies. \emph{Journal of Statistical Software} 42 (13) 1--17.
-       
 Abadie, A., Diamond, A., Hainmueller, J. (2011). Synth: An R Package for Synthetic Control Methods in Comparative Case Studies. \emph{Journal of Statistical Software} 42 (13) 1--17.
 
 Abadie A, Diamond A, Hainmueller J (2010). Synthetic Control Methods for Comparative Case Studies: Estimating the Effect of California's Tobacco Control Program. \emph{Journal of the American Statistical Association} 105 (490) 493--505.
@@ -35,7 +34,7 @@ Abadie, A. and Gardeazabal, J. (2003) Economic Costs of Conflict: A Case Study o
   
             }
    
-\author{Jens Hainmueller and Alexis Dimaond}
+\author{Jens Hainmueller and Alexis Diamond}
 \seealso{\code{\link{synth}}, \code{\link{dataprep}}, \code{\link{gaps.plot}}, \code{\link{path.plot}}
 }
 

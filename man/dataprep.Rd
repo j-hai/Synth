@@ -2,7 +2,7 @@
 \alias{dataprep}
 \title{Constructs a list of matrices from panel dataset to be loaded into synth()}
 \description{
-The \code{\link{synth}} function takes a standard panel dataset and produces a list of data objects necessary for running \code{\link{synth}} and other Synth package functions to construct synthetic control groups according to the methods outlined in Abadie and Gardeazabal (2003) and Abadie, Diamond, Hainmueller (2010, 2011, 2014) (see references and example). 
+The \code{\link{dataprep}} function takes a standard panel dataset and produces a list of data objects necessary for running \code{\link{synth}} and other Synth package functions to construct synthetic control groups according to the methods outlined in Abadie and Gardeazabal (2003) and Abadie, Diamond, Hainmueller (2010, 2011, 2014) (see references and example). 
 
 User supplies a dataframe ("foo"), chooses predictors, special predictors (explained below), the operators that act upon these predictors, the dependent variable, identifies the columns associated with unit numbers, time periods (and unit names, when available), as well as the treated unit, the control units, the time-period over which to select the predictors, the time-period over which to optimize, and the time-period over which outcome data should be plotted.
 
@@ -23,19 +23,19 @@ The output of \code{\link{dataprep}} contains a list of matrices. This list obje
   \item{predictors}{A vector of column numbers or column-name character
     strings that identifies the predictors' columns. All predictors have to be numeric.}
   \item{predictors.op}{A character string identifying the method (operator) to be used
-    on the predictors.  Default is "mean". rm.na = T is hardwired into
+    on the predictors.  Default is "mean". na.rm = T is hardwired into
     the code. See *Details*.}
   \item{special.predictors}{A list object identifying additional numeric predictors and their associated pre-treatment years and operators (analogous to
     ``predictors.op'' above).  See *Details*.}
   \item{dependent}{A scalar identifying the column number or column-name character string that corresponds to the numeric dependent (outcome) variable.}
-  \item{unit.variable}{A scalar identifying the column number or column-name character string associated unit numbers. The unit.varibale has to be numeric.}
+  \item{unit.variable}{A scalar identifying the column number or column-name character string associated with unit numbers. The unit.variable has to be numeric.}
   \item{time.variable}{A scalar identifying column number or column-name character string associated with period (time) data. The time variable has to be numeric.} 
   \item{treatment.identifier}{A scalar identifying the ``unit.variable'' number or a character string
-    giving the ``unit.name ''of the treated unit. If a character is supplied, a unit.names.variable also has to be supplied to identify the treated unit.}
-  \item{controls.identifier }{ A scalar identifying the ``unit.variable'' numbers or a vector of character strings giving the ``unit.name''s of control units. If a character is supplied, a unit.names.variable also has to be supplied to identify the control units unit.}
+    giving the ``unit.name'' of the treated unit. If a character is supplied, a unit.names.variable also has to be supplied to identify the treated unit.}
+  \item{controls.identifier }{ A vector identifying the ``unit.variable'' numbers or a vector of character strings giving the ``unit.name''s of control units. If a character is supplied, a unit.names.variable also has to be supplied to identify the control units. The order in which the control units are listed does not matter: the output always holds them in ascending order of their ``unit.variable'' number.}
   \item{time.predictors.prior }{A numeric vector identifying the pretreatment periods over which the values for the outcome predictors should be averaged.}
   \item{time.optimize.ssr}{A numeric vector identifying the periods of the dependent variable over which the loss function 
-should be minimized (i.e. the periods over which mean squared prediction error (MSPE) , that is the sum of squared residuals between treated and the synthetic control unit, are minimized.}
+should be minimized (i.e. the periods over which mean squared prediction error (MSPE), that is the sum of squared residuals between treated and the synthetic control unit, are minimized).}
   \item{time.plot}{A vector identifying the periods over which results are to be plotted
     with \code{\link{gaps.plot}} and \code{\link{path.plot}}.}
   \item{unit.names.variable}{A scalar or column-name character string identifying the column with the names of the units. This variable has to be of mode character. 
@@ -48,19 +48,19 @@ should be minimized (i.e. the periods over which mean squared prediction error (
   The special.predictors argument is a list object that contains one or
   more lists of length = 3.  The required components of each of these lists are:
 
-  (a) scalar column number associated with that predictor
+  (a) scalar column number or column-name character string associated with that predictor
   (b) vector of time-period number(s) desired (eg., 1998:2003)
   (c) character-string identifying the name of the operation 
   to be applied (ie., "mean", "median", etc.)
 
   eg.,
-  special.predictors <- list(listc(x1, 1990:2000, "mean"),
-                             listc(x2, 1980:1983, "median"),
-                             listc(x3, 1980, "mean")   
+  special.predictors <- list(list(x1, 1985:1989, "mean"),
+                             list(x2, 1980:1983, "median"),
+                             list(x3, 1980, "mean")
                              )
   
-  indicates that predictor x1, should be used with its values averaged over periods 1990:2000; 
-predicator x2 should be used with its median values over periods 1980:1983; x3 should be used with the values from period 1980 only.
+  indicates that predictor x1 should be used with its values averaged over periods 1985:1989;
+predictor x2 should be used with its median values over periods 1980:1983; x3 should be used with the values from period 1980 only.
 
 }
 \value{ 
@@ -91,14 +91,12 @@ predicator x2 should be used with its median values over periods 1980:1983; x3 s
   \item{names.and.numbers}{dataframe with two columns showing all unit numbers and
     corresponding unit names.
   }
-  \item{tag}{a list of all arguments in initial function call.}
+  \item{tag}{a list of all arguments in initial function call. \code{controls.identifier} (the column order of X0, Z0 and Y0plot), \code{time.optimize.ssr} (the row order of Z0 and Z1), \code{time.plot} (the row order of Y0plot and Y1plot) and \code{time.predictors.prior} are stored in ascending order.}
 }
 \references{
 
 Abadie, A., Diamond, A., Hainmueller, J. (2014). Comparative Politics and the Synthetic Control Method. \emph{American Journal of Political Science} 59(2): 495-510.
 
-Synthetic : An R Package for Synthetic Control Methods in Comparative Case Studies. \emph{Journal of Statistical Software} 42 (13) 1--17.
-       
 Abadie, A., Diamond, A., Hainmueller, J. (2011). Synth: An R Package for Synthetic Control Methods in Comparative Case Studies. \emph{Journal of Statistical Software} 42 (13) 1--17.
 
 Abadie A, Diamond A, Hainmueller J (2010). Synthetic Control Methods for Comparative Case Studies: Estimating the Effect of California's Tobacco Control Program. \emph{Journal of the American Statistical Association} 105 (490) 493--505.
@@ -133,7 +131,7 @@ dataprep.out<-
    unit.variable = "unit.num",
    time.variable = "year",
    special.predictors = list(
-      list("Y", 1991, "mean"),
+      list("Y", 1990, "mean"),
       list("Y", 1985, "mean"),
       list("Y", 1980, "mean")
                             ),
@@ -244,7 +242,7 @@ dataprep.out$X0                 <-
 dataprep.out$X0[
  -which(rownames(dataprep.out$X0)=="school.post.high"),]
 
-# 2. make total and compute shares for the schooling catgeories
+# 2. make total and compute shares for the schooling categories
 lowest  <- which(rownames(dataprep.out$X0)=="school.illit")
 highest <- which(rownames(dataprep.out$X0)=="school.high")
 

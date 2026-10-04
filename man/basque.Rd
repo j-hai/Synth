@@ -15,8 +15,8 @@ of the synthetic control method with the synth library.}
 \usage{data(basque)}
 \format{A panel dataframe made up of 18 units: 1 treated (no 17; the Basque country) and 16 control regions (no. 2-16,18).
 Region no. 1 is the average for the whole country of Spain. 1 outcome variable (gdpcap). 13 predictor variables 
-(6 sectoral production shares, 6 highest educational attainment categories, population density, and the investment rate).
-Region names and numbers are stored in regionno and regionname. 42 time periods (1955 - 1997).
+(6 sectoral production shares, 5 highest educational attainment categories, population density, and the investment rate).
+Region names and numbers are stored in regionno and regionname. 43 time periods (1955 - 1997).
 All columns have self-explanatory column names. For reference the variables are:
 \itemize{
 \item \preformatted{regionno}: Region Number.
@@ -31,9 +31,9 @@ total production.
 total production.
 \item \preformatted{sec.construction}: production in construction and engineering sector as a percentage of
 total production.
-\item \preformatted{sec.energy}: production in marketable services sector as a percentage of
+\item \preformatted{sec.services.venta}: production in marketable services sector as a percentage of
 total production.
-\item \preformatted{sec.energy}: production in Nonmarketable services sector as a percentage of
+\item \preformatted{sec.services.nonventa}: production in Nonmarketable services sector as a percentage of
 total production.
 \item \preformatted{school.illit}: number of illiterate persons.
 \item \preformatted{school.prim}: number of persons with primary education or without studies.

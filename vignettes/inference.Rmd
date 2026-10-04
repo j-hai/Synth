@@ -28,7 +28,7 @@ set.seed(1)
 This vignette walks through inference for the synthetic control method
 as implemented in the `Synth` package, using the canonical example
 from Abadie, Diamond, and Hainmueller (2010): California's
-Proposition 99 cigarette tax of 1988. For the basic `dataprep()` →
+Proposition 99 cigarette tax of 1988. For the basic `synth_data()` →
 `synth()` → `path.plot()` flow, see `vignette("synth-quickstart",
 package = "Synth")`.
 
@@ -198,7 +198,7 @@ test$n_valid_placebos
 ```
 
 California's post/pre MSPE ratio is far in the right tail of the
-placebo distribution: only one or two of the 38 placebo states have
+placebo distribution: none of the 38 placebo states have
 ratios as extreme as California's, so the one-sided p-value is small.
 
 ### Plot the placebo distribution
@@ -256,7 +256,7 @@ unit weights via `kernlab::ipop`. As of `Synth 1.2-0`, two opt-in
 backends are also available:
 
 ```{r alt-backends, eval = FALSE}
-# Convex-optimization backend (CVXR; default solver is OSQP)
+# Convex-optimization backend (CVXR; default solver is CLARABEL)
 fit_cvxr  <- synth(dp, quadopt = "cvxr",  verbose = FALSE)
 
 # Autodiff/GPU backend (Frank-Wolfe simplex LS via torch)
@@ -265,9 +265,9 @@ fit_torch <- synth(dp, quadopt = "torch", verbose = FALSE)
 
 Both are in `Suggests:` and only loaded when requested. The CVXR
 backend is a drop-in alternative useful when ipop converges slowly or
-you want a different solver pool (OSQP by default; SCS, ECOS, or
-MOSEK selectable via `cvxr_pars = list(solver = ...)`). The torch
-backend supports CPU, CUDA, and Apple MPS via `torch_pars =
+you want a different solver pool (CLARABEL by default; OSQP, SCS,
+ECOS, or MOSEK selectable via `cvxr_pars = list(solver = ...)`). The
+torch backend supports CPU, CUDA, and Apple MPS via `torch_pars =
 list(device = "cuda")` and is most useful on large panels. The first
 torch call in a session may require `torch::install_torch()` to
 download libtorch (~600MB).

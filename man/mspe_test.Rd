@@ -20,7 +20,7 @@ A list with elements
   \item{mspe_ratio_treated}{The treated unit's post/pre MSPE ratio.}
   \item{mspe_ratios_placebos}{Numeric vector of placebo ratios, with \code{NA} for failed refits.}
   \item{pvalue}{One-sided empirical p-value.}
-  \item{n_valid_placebos}{Count of placebos with finite ratios.}
+  \item{n_valid_placebos}{Count of placebos with non-missing ratios.}
 }
 \references{
 Abadie, A., Diamond, A., and Hainmueller, J. (2010). Synthetic Control Methods for Comparative Case Studies. \emph{Journal of the American Statistical Association} 105 (490) 493--505.

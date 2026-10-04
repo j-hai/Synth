@@ -22,7 +22,7 @@ torch_pars = list())
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{variables.v}{
-1 by k a vector of v weights.
+a 1 by k vector of v weights.
 }
   \item{X0.scaled}{
 matrix of controls' predictor data. nrows = number of predictors and (possibly) special predictors. ncols = number of control units.
@@ -35,11 +35,11 @@ matrix of controls' predictor data. nrows = number of predictors and (possibly) 
 matrix of treated outcome data for the pre-treatment periods over which MSPE is to be minimized. nrows = number of pre-treatment periods. ncols = one.
 }
   \item{margin.ipop}{
-setting for ipop optimization routine: how close we get to the constrains 
+setting for ipop optimization routine: how close we get to the constraints 
 (see \code{\link[kernlab:ipop]{ipop}} for details)
 }
   \item{sigf.ipop}{
-setting for ipop optimization routine: Precision (default: 7 significant figures) 
+setting for ipop optimization routine: Precision (default: 5 significant figures) 
 (see \code{\link[kernlab:ipop]{ipop}} for details)
 }
   \item{bound.ipop}{
@@ -48,13 +48,13 @@ setting for ipop optimization routine: Clipping bound for the variables
 }
   \item{quadopt}{
 string vector that specifies the routine for quadratic optimization over w weights.
-One of \code{"ipop"} (default; see \code{\link[kernlab:ipop]{ipop}}), \code{"cvxr"} (CVXR with OSQP as the default solver), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package).
+One of \code{"ipop"} (default; see \code{\link[kernlab:ipop]{ipop}}), \code{"cvxr"} (CVXR with CLARABEL as the default solver), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package).
 }
   \item{cvxr_pars}{
-Optional named list of CVXR backend tuning. Recognized fields: \code{solver} (default \code{"OSQP"}; \code{"SCS"} and \code{"ECOS"} also supported, the latter requiring \pkg{ECOSolveR}), \code{eps} (default \code{1e-8}), \code{max_iter} (default \code{5000}). Ignored unless \code{quadopt = "cvxr"}.
+Optional named list of CVXR backend tuning. Recognized fields: \code{solver} (default \code{"CLARABEL"}; \code{"OSQP"}, \code{"SCS"} and \code{"ECOS"} also supported, the latter requiring \pkg{ECOSolveR}), \code{eps} (default \code{1e-8}), \code{max_iter} (default \code{5000}). Ignored unless \code{quadopt = "cvxr"}.
 }
   \item{torch_pars}{
-Optional named list of torch backend tuning. Recognized fields: \code{max_iter} (default \code{500}), \code{tol} (default \code{1e-8}), \code{device} (default \code{"cpu"}; \code{"cuda"} or \code{"mps"} for GPU), \code{dtype} (default \code{"float64"}). Ignored unless \code{quadopt = "torch"}. Both \code{cvxr_pars} and \code{torch_pars} are forwarded by \code{\link{synth}} to every \code{fn.V} invocation during V-search, so the inner solves use the same backend configuration as the final W solve.
+Optional named list of torch backend tuning. Recognized fields: \code{max_iter} (default \code{500}), \code{tol} (default \code{1e-8}), \code{device} (default \code{"cpu"}; \code{"cuda"} or \code{"mps"} for GPU), \code{dtype} (default \code{"float64"}). Ignored unless \code{quadopt = "torch"}. Both \code{cvxr_pars} and \code{torch_pars} are forwarded by \code{\link{synth}} to every \code{fn.V} invocation during V-search, so by default the inner solves use the same backend configuration as the final W solve (the \code{*_inner} and \code{*_outer} arguments of \code{\link{synth}} override this per stage).
 }
 
 }
@@ -65,8 +65,6 @@ A scalar that contains the function value.
 
 Abadie, A., Diamond, A., Hainmueller, J. (2014). Comparative Politics and the Synthetic Control Method. \emph{American Journal of Political Science} 59(2): 495-510.
 
-Synthetic : An R Package for Synthetic Control Methods in Comparative Case Studies. \emph{Journal of Statistical Software} 42 (13) 1--17.
-       
 Abadie, A., Diamond, A., Hainmueller, J. (2011). Synth: An R Package for Synthetic Control Methods in Comparative Case Studies. \emph{Journal of Statistical Software} 42 (13) 1--17.
 
 Abadie A, Diamond A, Hainmueller J (2010). Synthetic Control Methods for Comparative Case Studies: Estimating the Effect of California's Tobacco Control Program. \emph{Journal of the American Statistical Association} 105 (490) 493--505.

@@ -17,7 +17,7 @@ synth_inference(synth.res = NULL,
   \item{dataprep.res}{Output list from \code{\link{dataprep}}.}
   \item{method}{One of \code{"conformal"} (default) or \code{"parametric"}. See Details.}
   \item{alpha}{Miscoverage level. The band targets nominal \eqn{(1-\alpha)} coverage. Default 0.05.}
-  \item{treatment_time}{Optional first post-treatment period (a value of \code{dataprep.res$tag$time.plot}). If \code{NULL} (default), the first post-treatment period is taken to be \code{max(time.optimize.ssr) + 1}. The post window is \code{time.plot >= treatment_time}; pre-treatment plot years \emph{before} the SSR optimization window (e.g.\ 1955--1959 in a typical Basque setup with \code{time.optimize.ssr = 1960:1969}) are pre-treatment and are excluded from post-period MSPE summaries.}
+  \item{treatment_time}{Optional first post-treatment period (a value of \code{dataprep.res$tag$time.plot}). If \code{NULL} (default), the first post-treatment period is the \code{treatment_time} stored by \code{\link{synth_data}} when \code{dataprep.res} was built with it, and \code{max(time.optimize.ssr) + 1} otherwise. The post window is \code{time.plot >= treatment_time}; pre-treatment plot years \emph{before} the SSR optimization window (e.g.\ 1955--1959 in a typical Basque setup with \code{time.optimize.ssr = 1960:1969}) are pre-treatment and are excluded from post-period MSPE summaries.}
 }
 \details{
 With \code{method = "conformal"}, the half-width of the band is the order statistic at rank \eqn{k = \lceil (n + 1)(1 - \alpha) \rceil} of the absolute pre-treatment residuals \eqn{|\hat{Y}_{1,t} - \hat{Y}_{0,t} \hat{w}|} (Chernozhukov, Wuthrich, and Zhu 2021). The \eqn{(n+1)} adjustment delivers exact \eqn{(1-\alpha)} finite-sample coverage under exchangeability. When \eqn{k > n} the requested level is infeasible at this calibration sample size, the function emits a warning, and \code{conformal_q} is \code{Inf}.
@@ -71,7 +71,7 @@ d <- dataprep(
   time.plot = 1984:1996
 )
 fit <- synth(d)
-inf <- synth_inference(fit, d, method = "conformal", alpha = 0.10)
+inf <- synth_inference(fit, d, method = "conformal", alpha = 0.20)
 print(inf)
 plot(inf)
 }
