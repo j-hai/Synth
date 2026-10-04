@@ -8,6 +8,14 @@ function(           data.prep.obj = NULL,
                       optimxmethod = c("Nelder-Mead","BFGS"),
                       genoud = FALSE,
                       quadopt = "ipop",
+                      Margin.ipop = 0.0005,
+                      Sigf.ipop = 5,
+                      Bound.ipop = 10,
+                      verbose = FALSE,
+                       ...,
+                      # arguments added in 1.2-0 come after `...` so that calls
+                      # written for 1.1-10 (by position, or with abbreviated
+                      # argument names) keep working; name these in full
                       quadopt_inner = NULL,
                       quadopt_outer = NULL,
                       cvxr_pars = list(),
@@ -15,12 +23,7 @@ function(           data.prep.obj = NULL,
                       cvxr_pars_outer = NULL,
                       torch_pars = list(),
                       torch_pars_inner = NULL,
-                      torch_pars_outer = NULL,
-                      Margin.ipop = 0.0005,
-                      Sigf.ipop = 5,
-                      Bound.ipop = 10,
-                      verbose = FALSE,
-                       ...
+                      torch_pars_outer = NULL
                       )
   {
     # Resolve inner / outer quadopt: NULL falls back to the master `quadopt`,
