@@ -39,7 +39,7 @@ synth_data(panel,
   \item{time_col}{Name of the time column (character). Must be numeric.}
   \item{treatment_time}{Single numeric value: the first post-treatment period. Used as the SSR-window cutoff and as the default treatment date for downstream inference.}
   \item{predictors}{Character vector of predictor column names. \code{NULL} means rely entirely on \code{special_predictors}.}
-  \item{predictors.op}{Aggregation op for \code{predictors} over \code{pre_periods}. Default \code{"mean"}.}
+  \item{predictors.op}{Name of the function used to aggregate \code{predictors} over \code{pre_periods}, for the treated and the control units alike. Default \code{"mean"}. See \code{\link{dataprep}} for which functions can be used.}
   \item{special_predictors}{List of \code{list(name, periods, op)} triples passed to \code{\link{dataprep}}.}
   \item{pre_periods}{Optional integer vector of pre-treatment time values. Defaults to every \code{time_col} value strictly before \code{treatment_time}.}
   \item{plot_periods}{Optional integer vector of times for the full plot horizon. Defaults to the full panel range.}

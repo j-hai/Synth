@@ -51,3 +51,27 @@ test_that("synth() rejects malformed inputs", {
     "no variation"
   )
 })
+
+test_that("synth() still accepts calls written for 1.1-10", {
+  # arguments added in 1.2-0 come after `...`
+  expect_identical(
+    names(formals(synth))[1:14],
+    c("data.prep.obj", "X1", "X0", "Z0", "Z1", "custom.v", "optimxmethod",
+      "genoud", "quadopt", "Margin.ipop", "Sigf.ipop", "Bound.ipop",
+      "verbose", "...")
+  )
+
+  d <- make_dataprep()
+  v <- rep(1 / nrow(d$X1), nrow(d$X1))
+  ref <- synth(d, custom.v = v)
+
+  # all thirteen 1.1-10 arguments by position
+  by_position <- synth(d, NULL, NULL, NULL, NULL, v,
+                       c("Nelder-Mead", "BFGS"), FALSE, "ipop",
+                       0.0005, 5, 10, FALSE)
+  expect_equal(by_position$solution.w, ref$solution.w)
+
+  # abbreviated argument names
+  abbreviated <- synth(d, c = v, quad = "ipop", verb = FALSE)
+  expect_equal(abbreviated$solution.w, ref$solution.w)
+})

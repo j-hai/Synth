@@ -27,6 +27,10 @@ synth(data.prep.obj = NULL,
       custom.v = NULL,
       optimxmethod = c("Nelder-Mead", "BFGS"),
       genoud = FALSE, quadopt = "ipop",
+      Margin.ipop = 5e-04,
+      Sigf.ipop = 5,
+      Bound.ipop = 10,
+      verbose = FALSE, ...,
       quadopt_inner = NULL,
       quadopt_outer = NULL,
       cvxr_pars = list(),
@@ -34,11 +38,7 @@ synth(data.prep.obj = NULL,
       cvxr_pars_outer = NULL,
       torch_pars = list(),
       torch_pars_inner = NULL,
-      torch_pars_outer = NULL,
-      Margin.ipop = 5e-04,
-      Sigf.ipop = 5,
-      Bound.ipop = 10,
-      verbose = FALSE, ...)
+      torch_pars_outer = NULL)
 }
 \arguments{
   \item{data.prep.obj}{
@@ -58,7 +58,7 @@ Character vector specifying optimization algorithms to be used. Permissible valu
 Logical flag. If \code{TRUE}, \code{\link{synth}} performs a two-step optimization. In the first step, \code{\link[rgenoud:genoud]{genoud}} is used to obtain a global solution. In the second step, the results are passed to the algorithm(s) chosen in \code{optimxmethod} for local optimization. This two-step procedure is slower but may yield lower loss for irregular search spaces.
 }
   \item{quadopt}{
-Character specifying the routine for quadratic optimization over W weights. One of \code{"ipop"} (default; \code{\link[kernlab:ipop]{ipop}} from \pkg{kernlab}, behavior unchanged from earlier versions of \pkg{Synth}), \code{"cvxr"} (CVXR with CLARABEL as the default solver; requires the \pkg{CVXR} package, in \code{Suggests:}), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package, also in \code{Suggests:}; supports CPU, CUDA, and Apple MPS via \code{torch_pars}). The two new backends are opt-in for users with larger panels or who prefer modern convex-optimization or autodiff/GPU machinery; on small panels they agree with ipop to within solver tolerance.
+Character specifying the routine for quadratic optimization over W weights. One of \code{"ipop"} (default; \code{\link[kernlab:ipop]{ipop}} from \pkg{kernlab}, behavior unchanged from earlier versions of \pkg{Synth}), \code{"cvxr"} (CVXR with CLARABEL as the default solver; requires the \pkg{CVXR} package, in \code{Suggests:}), or \code{"torch"} (Frank-Wolfe simplex least squares via the \pkg{torch} package, also in \code{Suggests:}; supports CPU, CUDA, and Apple MPS via \code{torch_pars}). The two new backends are opt-in for users with larger panels or who prefer modern convex-optimization or autodiff/GPU machinery; on small panels they reach the same objective value as ipop to within about 1e-3, the bound the package's tests check. The weights themselves can still differ when several weight vectors fit almost equally well, as in the toy \code{synth.data} example below: with the same V (for example with \code{quadopt_outer = "torch"}) the torch weights differ from the ipop weights by up to about 0.05, and with \code{quadopt = "torch"} the search over V can end at a different V, so the weights can differ by more.
 
 When \code{quadopt} alone is specified it applies to both the inner and outer QP solves. To use different backends for the two stages — e.g. fast \code{ipop} for the V-search loop and a modern solver only for the final W solve — use \code{quadopt_inner} and \code{quadopt_outer} below.
 }
@@ -87,7 +87,7 @@ Setting for the \code{ipop} optimization routine: precision in significant figur
 Setting for the \code{ipop} optimization routine: clipping bound for variables (see \code{\link[kernlab:ipop]{ipop}} for details).
 }
   \item{verbose}{Logical flag. If \code{TRUE}, intermediate results are displayed.}
-  \item{\dots}{Further arguments. Currently ignored: they are not passed on to \code{\link[optimx:optimx]{optimx}} or \code{\link[rgenoud:genoud]{genoud}}.}
+  \item{\dots}{Further arguments. Currently ignored: they are not passed on to \code{\link[optimx:optimx]{optimx}} or \code{\link[rgenoud:genoud]{genoud}}. The arguments listed after \code{\dots} in the usage (\code{quadopt_inner} to \code{torch_pars_outer}) were added in 1.2-0 and have to be named in full; the arguments before it keep their 1.1-10 order.}
 }
 \details{
 As proposed in Abadie and Gardeazabal (2003) and Abadie, Diamond, and Hainmueller (2010), \code{\link{synth}} searches for the set of weights that generate the best-fitting convex combination of control units. The predictor weight matrix V is chosen among positive definite diagonal matrices such that MSPE is minimized for the pre-intervention period.
@@ -113,7 +113,7 @@ Abadie, A., and Gardeazabal, J. (2003). Economic Costs of Conflict: A Case Study
 }
 \author{Jens Hainmueller and Alexis Diamond}
 \seealso{
-\code{\link{dataprep}}, \code{\link{gaps.plot}}, \code{\link{path.plot}}, \code{\link{synth.tab}}
+\code{\link{dataprep}}, \code{\link{synth_data}}, \code{\link{gaps.plot}}, \code{\link{path.plot}}, \code{\link{synth.tab}}, \code{\link{synth_inference}}, \code{\link{synth_placebos}}
 }
 \examples{
 \donttest{

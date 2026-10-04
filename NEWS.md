@@ -71,6 +71,12 @@
 
 ## New arguments wired through `synth()` and `synth_placebos()`
 
+* In `synth()` the arguments added in this release
+  (`quadopt_inner`, `quadopt_outer`, `cvxr_pars*`, `torch_pars*`)
+  come after `...`, so the arguments that existed in 1.1-10 keep
+  their order and can still be abbreviated. The new arguments have
+  to be named in full.
+
 * `synth()` now accepts `cvxr_pars` and `torch_pars` lists for tuning
   the `quadopt = "cvxr"` and `quadopt = "torch"` backends (e.g.
   `torch_pars = list(device = "mps")` for Apple Silicon GPU). These
@@ -118,7 +124,8 @@
   `synth_mspe_test()`, `synth_mspe_plot()`, and `plot()`.
 
 * No new package dependencies. Optional `parallel = TRUE` in
-  `synth_placebos()` uses `parallel::mclapply` on non-Windows.
+  `synth_placebos()` forks via `parallel::mclapply` on unix-likes
+  and uses a PSOCK cluster (`parallel::parLapply`) on Windows.
 
 ## Validity caveats
 
@@ -130,6 +137,30 @@
 * Conformal validity is exact under exchangeability of pre-period
   residuals; parametric validity assumes i.i.d. Gaussian residuals.
   Both are approximate when outcomes are autocorrelated.
+
+## New: `synth_data()`, the `smoking` data, and helper methods
+
+* `synth_data()` is a wrapper around `dataprep()` for the common case
+  of one treated unit and one treatment date. It takes a long panel
+  data frame, the treated unit, and `treatment_time` (the first
+  post-treatment period). By default the controls are all other
+  units, the pre-treatment periods are all periods before
+  `treatment_time`, and the plot horizon is every period in the
+  panel. It returns the same list as `dataprep()` and stores
+  `treatment_time`, which `synth_inference()` and `synth_placebos()`
+  then use as their default.
+
+* New dataset `smoking`: the state-level cigarette sales panel of
+  Abadie, Diamond, and Hainmueller (2010), 39 states from 1970 to
+  2000. The README and the inference vignette use it.
+
+* `as.data.frame()` methods for `synth_inference` and
+  `synth_placebos` objects, and `ggplot2::autoplot()` methods for
+  both, registered when `ggplot2` is loaded (`ggplot2` is in
+  `Suggests:`).
+
+* Two vignettes: `vignette("synth-quickstart")` and
+  `vignette("inference")`.
 
 ## Optional alternative QP backends
 
@@ -148,8 +179,9 @@
       require `torch::install_torch()` to download libtorch.
 
   `quadopt = "ipop"` remains the default and produces output identical
-  to `<= 1.1-10`. The new backends agree with ipop on the canonical
-  examples to within solver tolerance and exist for users with larger
+  to `<= 1.1-10`. The new backends reach the same objective as ipop to
+  within about 1e-3 on the examples tested (the weights can differ
+  when the problem is nearly degenerate; see `?synth`) and exist for users with larger
   panels who prefer modern convex-optimization solvers (CVXR) or
   autodiff/GPU machinery (torch). See the `quadopt` argument in `?synth`
   and the inference vignette for guidance on choosing a backend.
@@ -193,6 +225,14 @@
   `alpha` for which the conformal band is finite; and
   `citation("Synth")` now renders the authors correctly (the
   `person()` calls were malformed).
+
+* The startup message pointed to a web page that no longer exists; it
+  now points to the project page.
+
+* `DESCRIPTION` now requires R (>= 3.6.0). 1.1-10 stated no minimum
+  (development versions of 1.2-0 stated R 2.10); the package now
+  registers `ggplot2::autoplot()` methods with delayed S3
+  registration (R 3.6.0) and uses `isFALSE()` and `startsWith()`.
 
 # Synth 1.1-10
 

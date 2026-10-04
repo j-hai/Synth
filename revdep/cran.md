@@ -1,12 +1,9 @@
-## revdepcheck results
+## Reverse dependency results
 
-We checked 3 reverse dependencies, comparing R CMD check results across CRAN and dev versions of this package.
+We checked 3 reverse dependencies by hand (see README.md), comparing
+R CMD check results with the CRAN version of this package and with
+the development version.
 
  * We saw 0 new problems
- * We failed to check 1 packages
-
-Issues with CRAN packages are summarised below.
-
-### Failed to check
-
-* MSCMT (NA)
+ * MSCMT was checked from its CRAN binary because it could not be
+   built from source on the local machine (no Fortran compiler)

@@ -58,7 +58,9 @@ should be minimized (i.e. the periods over which mean squared prediction error (
   more lists of length = 3.  The required components of each of these lists are:
 
   (a) scalar column number or column-name character string associated with that predictor
+
   (b) vector of time-period number(s) desired (eg., 1998:2003)
+
   (c) character-string identifying the name of the operation 
   to be applied (ie., "mean", "median", etc.). It is used, and checked
   in the same way as predictors.op, only when (b) holds more than one
@@ -297,7 +299,8 @@ gaps.plot(synth.res = synth.out,
           )
           
 ## To create the placebo studies simply reassign
-## the intervention to other units or times (see references for details)
+## the intervention to other units or times (see references for details).
+## synth_placebos() runs the placebo fits for all control units.
 }
 }
 

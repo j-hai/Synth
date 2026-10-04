@@ -1,55 +1,115 @@
 # cran-comments.md
 
-## Submission notes for Synth 1.1-10
+## Submission notes for Synth 1.2-0 (draft)
 
-This is a small bug-fix and quality release relative to the previously
-published Synth 1.1-9 (2025-09-18).
+This file is prepared ahead of the 1.2-0 submission. The items under
+"To do before submitting" are still open.
+
+Synth 1.2-0 is a feature release relative to Synth 1.1-10 (on CRAN
+since 2026-04-29).
 
 ### What's new
 
-* `synth()` and `fn.V()` now `stop()` (rather than `cat()` + crash) when
-  the long-deprecated `quadopt = "LowRankQP"` is supplied. Previously
-  the call printed a deprecation message and then failed with an
-  uninformative "object 'solution.w' not found" error.
-* `synth(verbose = FALSE)` (the default) is now genuinely silent. The
-  per-stage progress messages and the final MSPE / solution.v /
-  solution.w summary block are now gated by `verbose = TRUE`.
-* `dataprep()`: the missing-data warning loop in the X0 (control
-  predictors) section now iterates over `nrow(X0)` instead of
-  `nrow(X1)`. Previously it covered only the first time period for
-  each control.
-* `path.plot()`: `Ylim` is now padded by a fraction of the data range,
-  not by `0.3 * Y.min`. The old formula moved the lower bound toward
-  zero for negative `Y.min`, cropping the bottom of negative-valued
-  series.
-* `synth()`: error message for `ncol(Z0) < 2` corrected (was a
-  copy-paste of the X0 message and incorrectly mentioned "treated
-  unit").
-* Several typos fixed in error/warning messages.
+* `synth_data()`, a wrapper around `dataprep()` for the common case of
+  one treated unit and one treatment date.
+* `synth_inference()`: split-conformal and parametric prediction
+  intervals around the synthetic counterfactual, with `print()`,
+  `plot()`, `as.data.frame()` and `ggplot2::autoplot()` methods.
+* `synth_placebos()`, `synth_mspe_test()`, `synth_mspe_plot()`: the
+  in-space placebo workflow of Abadie, Diamond, and Hainmueller
+  (2010), with the same set of methods.
+* Optional alternative QP backends for `synth()` and `fn.V()`:
+  `quadopt = "cvxr"` and `quadopt = "torch"`. `CVXR`, `torch` and
+  `ggplot2` are in `Suggests:`; there is no new hard dependency.
+* New dataset `smoking` and two vignettes.
+* Bug fixes in `dataprep()` and `synth.tab()`, listed below because
+  they can change output.
 
-All changes preserve the byte-for-byte numerical results of 1.1-9 on
-well-conditioned problems; verified by an internal regression test
-(`dev/02_regression_check.R`) against the frozen 1.1-9 source.
+### Changes that can alter output for existing code
+
+* `dataprep()` applied `predictors.op` to the treated unit only and
+  always used the mean for the control units. The operator is now
+  applied to both. Results change only for an operator other than the
+  default `"mean"`.
+* `dataprep()` labelled control units and periods in the order they
+  were supplied, while the data are arranged in ascending order.
+  Labels now follow the data, and `synth.tab()` matches unit names to
+  weights by unit number. Fitted weights and losses do not change;
+  labels, the row order of `names.and.numbers` and the order of
+  `tag$controls.identifier` and of the period vectors in `tag` change,
+  and only for input that was not
+  already in ascending order.
+* `dataprep()` now stops with an explanatory message for a predictor
+  operator that cannot be used (for example `"range"`). None of
+  these calls gave a usable result before: most stopped with an
+  unrelated-looking error, and an operator that returns something
+  other than a number (for example `"toString"`) gave a non-numeric
+  `X1` that `synth()` then rejected.
+* `Depends: R (>= 3.6.0)` is new. 1.1-10 declared no minimum R
+  version; the new code needs R 3.6.0 (delayed S3 registration of the
+  `ggplot2::autoplot()` methods).
+
+With the default settings (`quadopt = "ipop"`, `predictors.op =
+"mean"`) and unit identifiers and periods in ascending order,
+`dataprep()` and
+`synth()` return the same values as 1.1-10. This was checked by
+running both versions side by side over a grid of `dataprep()`
+configurations on the `synth.data` and `basque` examples.
 
 ### Test environments
 
-* macOS Tahoe 26.3.1 (local), R 4.5.3
-* Planned via win-builder R-devel and r-hub macOS-release on
-  submission.
+* Local: macOS (aarch64), R 4.4.2.
+* GitHub Actions: macOS-latest (R release), windows-latest (R
+  release), ubuntu-latest (R devel, R release, R oldrel-1).
 
 ### R CMD check results
 
-`R CMD check --as-cran` is clean locally — Status: OK, 0 NOTEs.
+* GitHub Actions: Status OK on all five configurations.
+* Local, `R CMD check --no-manual --run-donttest` with vignettes
+  built: 0 errors, 0 warnings, 1 note. The note is "Package suggested
+  but not available for checking: 'CVXR'" (not installed on the local
+  machine; the CVXR tests run on GitHub Actions).
 
 ### Reverse dependencies
 
-`Synth` has 3 direct reverse dependencies on CRAN: `MSCMT`, `sccic`,
-`SCtools`. We ran `revdepcheck::revdep_check()` comparing Synth
-1.1-10 against CRAN baseline 1.1-9; no new problems were introduced.
+`Synth` has 3 reverse dependencies on CRAN: `MSCMT`, `sccic` and
+`SCtools`. They were checked by hand against CRAN Synth 1.1-10 and
+against this version, on macOS (aarch64), R 4.4.2; see
+`revdep/README.md`. No new problems were found.
+
+* `SCtools` 0.3.3.1 (imports Synth): `R CMD check` gives the same
+  result with both versions.
+* `sccic` 0.1.1 (suggests Synth): `R CMD check` Status OK with both
+  versions.
+* `MSCMT` 1.4.4 (suggests Synth): could not be built from source on
+  the local machine (no Fortran compiler), so the CRAN binary (the
+  R 4.5 build; CRAN's R 4.4 binary is still 1.4.1) was
+  checked with `--install=skip`; same result with both versions.
+
+None of the three passes a predictor operator other than `"mean"` in
+its own code, examples, tests or vignettes. `SCtools` forwards a
+user's operator to `dataprep()`, and `MSCMT` (like `SCtools`) takes
+`dataprep()` objects the user created, so their users see the
+`predictors.op` change described above when they choose another
+operator.
 
 ### What we kept stable
 
-* All exported function names and signatures (`synth`, `dataprep`,
-  `synth.tab`, `path.plot`, `gaps.plot`, `fn.V`, `spec.pred.func`,
-  `collect.optimx`).
+* Every function exported by 1.1-10 is still exported (`synth`,
+  `dataprep`, `synth.tab`, `path.plot`, `gaps.plot`, `fn.V`,
+  `spec.pred.func`, `collect.optimx`). `synth()` and `fn.V()` gain
+  optional arguments whose defaults reproduce the 1.1-10 behaviour.
+  They are placed after the existing arguments (in `synth()`, after
+  `...`), so calls written for 1.1-10 that pass arguments by position
+  or abbreviate argument names keep working.
 * All return-list field names on `synth()` and `dataprep()` outputs.
+
+### To do before submitting
+
+* Run win-builder (R-devel) and `R CMD check --as-cran` including the
+  PDF manual.
+* Re-run the reverse dependency checks with `revdepcheck` on a
+  machine with a Fortran compiler, so that `MSCMT` is built from
+  source.
+* Set `Date:` in `DESCRIPTION` to the submission date.
+* Remove "(draft)" and this section.

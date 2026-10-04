@@ -121,6 +121,24 @@ available via `data(basque)`.
   right thing on Windows (PSOCK cluster) and unix-likes (forks).
 * **Two vignettes** — `vignette("synth-quickstart")` for a 5-minute
   intro, `vignette("inference")` for the inference deep dive.
+* **`predictors.op` now applies to the control units too** —
+  `dataprep()` used to apply it to the treated unit only and always
+  averaged the controls with the mean. Results change only when
+  `predictors.op` is not `"mean"` (for example `"median"`).
+* **Operator checks in `dataprep()`** — `predictors.op`, and the
+  operator of a special predictor that spans more than one period,
+  must name a function that accepts `na.rm = TRUE` and returns a
+  single number. Anything else (`"range"`, `"quantile"`, a misspelled
+  name) now stops with a message that says what is wrong.
+* **Labels follow the data** — `dataprep()` lists control units and
+  periods in ascending order, and `synth.tab()` matches unit names to
+  weights by unit number, so an unsorted `controls.identifier` no
+  longer prints weights next to the wrong units. The weights
+  themselves do not change.
+* **Placebo function names** — development versions of 1.2-0 used
+  names that clash with the `SCtools` package. The functions are now
+  `synth_placebos()`, `synth_mspe_test()`, `synth_mspe_plot()`, and
+  the `plot()` method; the change log lists the old names.
 
 ### Choosing an inference method
 
