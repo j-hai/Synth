@@ -107,7 +107,7 @@ gaps.plot(synth.res = fit, dataprep.res = dp,
 - For prediction intervals around the synthetic counterfactual, see
   `?synth_inference` and `vignette("inference", package = "Synth")`.
 - For placebo-based inference (Abadie–Diamond–Hainmueller 2010), see
-  `?generate_placebos` and `?mspe_test`.
+  `?synth_placebos` and `?synth_mspe_test`.
 - For ggplot2-friendly plots, `library(ggplot2)` and call
   `autoplot()` on the inference / placebo objects.
 - For the long-form constructor, see `?dataprep`.

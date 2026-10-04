@@ -1,4 +1,4 @@
-generate_placebos <-
+synth_placebos <-
 function(synth.res = NULL,
          dataprep.res = NULL,
          Sigf.ipop = 5,
@@ -210,11 +210,11 @@ function(d, i)
     swapped
   }
 
-mspe_test <-
+synth_mspe_test <-
 function(placebos)
   {
     if (!inherits(placebos, "synth_placebos"))
-      stop("\n placebos must be the output of generate_placebos() \n")
+      stop("\n placebos must be the output of synth_placebos() \n")
 
     treated.ratio <- placebos$treated$mspe_ratio
     placebo.ratios <- vapply(placebos$placebos, function(f) f$mspe_ratio, numeric(1))
@@ -232,14 +232,14 @@ function(placebos)
     )
   }
 
-mspe_plot <-
+synth_mspe_plot <-
 function(placebos,
          Main = "Post/Pre MSPE Ratio",
          Xlab = "MSPE ratio",
          Ylab = "")
   {
     if (!inherits(placebos, "synth_placebos"))
-      stop("\n placebos must be the output of generate_placebos() \n")
+      stop("\n placebos must be the output of synth_placebos() \n")
 
     treated.ratio  <- placebos$treated$mspe_ratio
     placebo.ratios <- vapply(placebos$placebos, function(f) f$mspe_ratio, numeric(1))
@@ -262,8 +262,8 @@ function(placebos,
     invisible(NULL)
   }
 
-plot_placebos <-
-function(placebos,
+plot.synth_placebos <-
+function(x,
          mspe_threshold = NULL,
          Ylab = "Gap",
          Xlab = "Time",
@@ -271,10 +271,14 @@ function(placebos,
          Ylim = NA,
          tr.intake = NA,
          treated_col = "black",
-         placebo_col = "grey60")
+         placebo_col = "grey60",
+         ...)
   {
-    if (!inherits(placebos, "synth_placebos"))
-      stop("\n placebos must be the output of generate_placebos() \n")
+    placebos <- x
+    if (length(list(...)) > 0)
+      warning("unused arguments ignored: ",
+              paste(names(list(...)), collapse = ", "),
+              " (use Main, Xlab, Ylab, Ylim for titles and limits)")
 
     pre.idx <- placebos$pre_idx
     post.idx <- placebos$post_idx
@@ -345,11 +349,8 @@ function(x, ...)
     cat("Pre-treatment periods : ", length(x$pre_idx), "\n", sep = "")
     cat("Post-treatment periods: ", length(x$post_idx), "\n", sep = "")
     cat(sprintf("Treated post/pre MSPE ratio: %.4f\n", x$treated$mspe_ratio))
-    test <- mspe_test(x)
+    test <- synth_mspe_test(x)
     cat(sprintf("One-sided placebo p-value:   %.4f  (n_valid = %d)\n",
                 test$pvalue, test$n_valid_placebos))
     invisible(x)
   }
-
-plot.synth_placebos <-
-function(x, ...) plot_placebos(x, ...)

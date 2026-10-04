@@ -16,7 +16,7 @@ test_that("as.data.frame.synth_inference returns the documented columns", {
 test_that("as.data.frame.synth_placebos returns long format with treated row", {
   d <- make_dataprep()
   fit <- synth(d, verbose = FALSE)
-  pl <- generate_placebos(fit, d, verbose = FALSE)
+  pl <- synth_placebos(fit, d, verbose = FALSE)
 
   df <- as.data.frame(pl)
   expect_named(df, c("time", "donor", "gap", "is_treated"))

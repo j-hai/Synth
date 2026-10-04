@@ -107,11 +107,9 @@ available via `data(basque)`.
   and parametric Gaussian prediction intervals around the synthetic
   counterfactual. Returns an S3 object with `print()`, `plot()`, and
   `as.data.frame()` methods.
-* **`generate_placebos()`, `mspe_test()`, `mspe_plot()`,
-  `plot_placebos()`** — full in-space placebo workflow following
-  Abadie, Diamond, and Hainmueller (2010). Function names match those
-  in the **SCtools** package by design; namespace-qualify if both are
-  loaded.
+* **`synth_placebos()`, `synth_mspe_test()`, `synth_mspe_plot()`**,
+  with a `plot()` method — full in-space placebo workflow following
+  Abadie, Diamond, and Hainmueller (2010).
 * **Optional alternative QP backends** — `quadopt = "cvxr"` (CVXR +
   CLARABEL by default) and `quadopt = "torch"` (Frank-Wolfe simplex LS via the `torch`
   package, GPU/MPS-capable). Inner/outer split via `quadopt_inner` /
@@ -128,7 +126,7 @@ available via `data(basque)`.
 
 | Question                                                              | Method                              | Function                                     | Package |
 |---                                                                    |---                                  |---                                           |---      |
-| How surprising is the effect vs. other units?                          | placebo MSPE-ratio rank             | `mspe_test()`                                | Synth   |
+| How surprising is the effect vs. other units?                          | placebo MSPE-ratio rank             | `synth_mspe_test()`                          | Synth   |
 | Prediction band around the counterfactual (lightweight)                | split-conformal                     | `synth_inference(method = "conformal")`      | Synth   |
 | Prediction band assuming i.i.d. Gaussian residuals                     | parametric                          | `synth_inference(method = "parametric")`     | Synth   |
 | Period-varying intervals decomposing in/out-of-sample uncertainty      | CFPT prediction intervals           | `scpi::scpi()`                               | scpi    |

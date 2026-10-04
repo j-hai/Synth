@@ -36,7 +36,7 @@ package = "Synth")`.
 
 | Question | Method | Function |
 |---|---|---|
-| How surprising is the effect vs. other units? | placebo MSPE-ratio rank | `mspe_test()` |
+| How surprising is the effect vs. other units? | placebo MSPE-ratio rank | `synth_mspe_test()` |
 | Lightweight prediction band around the counterfactual | split-conformal | `synth_inference(method = "conformal")` |
 | Same, with i.i.d. Gaussian residuals | parametric | `synth_inference(method = "parametric")` |
 | Period-varying intervals decomposing in/out-of-sample uncertainty | CFPT | `scpi::scpi()` (separate package) |
@@ -46,8 +46,8 @@ It covers:
 1. Building the synthetic control with the new `synth_data()` wrapper.
 2. Computing prediction intervals with `synth_inference()`
    (split-conformal and Gaussian-residual methods).
-3. Running an in-space placebo test with `generate_placebos()`,
-   `mspe_test()`, `mspe_plot()`, and `plot_placebos()`.
+3. Running an in-space placebo test with `synth_placebos()`,
+   `synth_mspe_test()`, `synth_mspe_plot()`, and the `plot()` method.
 
 For background on the method itself, see `?synth` and the references at
 the end. For methods that further decompose in-sample and out-of-sample
@@ -177,21 +177,21 @@ distribution.
 
 ### Generate the placebos
 
-`generate_placebos()` runs one refit per donor. With 38 donor states
+`synth_placebos()` runs one refit per donor. With 38 donor states
 this takes about a minute on a laptop.
 
 ```{r placebos}
-placebos <- generate_placebos(fit, dp, verbose = FALSE)
+placebos <- synth_placebos(fit, dp, verbose = FALSE)
 placebos
 ```
 
 ### Test
 
-`mspe_test()` returns a one-sided p-value via the empirical rank of
-the treated unit's post/pre MSPE ratio:
+`synth_mspe_test()` returns a one-sided p-value via the empirical rank
+of the treated unit's post/pre MSPE ratio:
 
 ```{r test}
-test <- mspe_test(placebos)
+test <- synth_mspe_test(placebos)
 test$mspe_ratio_treated
 test$pvalue
 test$n_valid_placebos
@@ -204,16 +204,16 @@ ratios as extreme as California's, so the one-sided p-value is small.
 ### Plot the placebo distribution
 
 ```{r mspe-plot, fig.cap = "Distribution of post/pre MSPE ratios across placebos. California is highlighted."}
-mspe_plot(placebos)
+synth_mspe_plot(placebos)
 ```
 
 ### Plot the placebo gaps
 
 ```{r placebo-gaps, fig.cap = "Treated gap (black) overlaid on placebo gaps (grey)."}
-plot_placebos(placebos,
-              Ylab = "Gap in cigarette sales per capita (packs)",
-              Xlab = "Year",
-              Main = "California and placebo gaps")
+plot(placebos,
+     Ylab = "Gap in cigarette sales per capita (packs)",
+     Xlab = "Year",
+     Main = "California and placebo gaps")
 abline(v = 1989, lty = 3)
 ```
 
@@ -222,11 +222,11 @@ pre-period MSPE is much worse than the treated unit's (their
 synthetic controls couldn't fit them well in the first place):
 
 ```{r placebo-gaps-trimmed, fig.cap = "Same plot, restricted to placebos with reasonable pre-period fit."}
-plot_placebos(placebos,
-              mspe_threshold = 5,
-              Ylab = "Gap in cigarette sales per capita (packs)",
-              Xlab = "Year",
-              Main = "California and placebo gaps (pre-MSPE <= 5x California)")
+plot(placebos,
+     mspe_threshold = 5,
+     Ylab = "Gap in cigarette sales per capita (packs)",
+     Xlab = "Year",
+     Main = "California and placebo gaps (pre-MSPE <= 5x California)")
 abline(v = 1989, lty = 3)
 ```
 
@@ -280,10 +280,9 @@ completion).
 
 ## See also
 
-- `?synth_inference`, `?generate_placebos`, `?mspe_test`,
-  `?mspe_plot`, `?plot_placebos`.
-- The **SCtools** package provides additional placebo-based machinery
-  (the function names in `Synth` match `SCtools` by design).
+- `?synth_inference`, `?synth_placebos`, `?synth_mspe_test`,
+  `?synth_mspe_plot`, `?plot.synth_placebos`.
+- The **SCtools** package provides additional placebo-based machinery.
 - The **scpi** package implements Cattaneo-Feng-Palomba-Titiunik
   prediction intervals, which decompose in-sample uncertainty about
   the synthetic weights and out-of-sample residual uncertainty.

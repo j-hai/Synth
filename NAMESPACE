@@ -6,7 +6,7 @@ importFrom("grDevices", "rgb")
 importFrom("stats", "qnorm", "quantile", "sd", "var")
 
 export(synth, dataprep, gaps.plot, path.plot, synth.tab, fn.V, spec.pred.func, collect.optimx)
-export(synth_inference, generate_placebos, mspe_test, mspe_plot, plot_placebos)
+export(synth_inference, synth_placebos, synth_mspe_test, synth_mspe_plot)
 export(synth_data)
 
 S3method(print, synth_inference)

@@ -46,7 +46,7 @@ synth_data(panel,
   \item{unit_names_col}{Optional column name carrying readable unit labels. Required when \code{treated} or \code{controls} are passed as names.}
 }
 \value{A \code{dataprep}-shaped list (the same structure returned by \code{\link{dataprep}}). The list also carries \code{tag$synth_data_treatment_time} and an \code{attr(., "synth_data_call")} for debugging.}
-\seealso{\code{\link{dataprep}} for the long-form constructor; \code{\link{synth}}, \code{\link{synth_inference}}, \code{\link{generate_placebos}} for what to do next.}
+\seealso{\code{\link{dataprep}} for the long-form constructor; \code{\link{synth}}, \code{\link{synth_inference}}, \code{\link{synth_placebos}} for what to do next.}
 \examples{
 \dontrun{
 data(basque)

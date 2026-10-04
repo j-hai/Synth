@@ -12,7 +12,7 @@ test_that("autoplot.synth_placebos returns a ggplot", {
   skip_if_not_installed("ggplot2")
   d <- make_dataprep()
   fit <- synth(d, verbose = FALSE)
-  pl <- generate_placebos(fit, d, verbose = FALSE)
+  pl <- synth_placebos(fit, d, verbose = FALSE)
 
   p <- ggplot2::autoplot(pl)
   expect_s3_class(p, "ggplot")

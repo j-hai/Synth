@@ -50,7 +50,7 @@ Cattaneo, M. D., Feng, Y., Palomba, F., and Titiunik, R. (2025). Uncertainty qua
 }
 \author{Jens Hainmueller and Alexis Diamond}
 \seealso{
-\code{\link{synth}}, \code{\link{dataprep}}, \code{\link{plot.synth_inference}}, \code{\link{generate_placebos}}.
+\code{\link{synth}}, \code{\link{dataprep}}, \code{\link{plot.synth_inference}}, \code{\link{synth_placebos}}.
 The \pkg{SCtools} package provides additional placebo-based inference; the \pkg{scpi} package provides period-varying CFPT prediction intervals that decompose in-sample and out-of-sample uncertainty.
 }
 \examples{
