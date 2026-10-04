@@ -276,3 +276,83 @@ test_that("predictors.op sees only the predictors, with missing values dropped",
   rows <- synth.data$unit.num == 13 & synth.data$year %in% 1984:1989
   expect_equal(unname(d$X0["X1", "13"]), mean(synth.data$X1[rows]))
 })
+
+test_that("predictors.op is checked before it is used", {
+  prep <- function(op) {
+    dataprep(foo = synth.data, predictors = c("X2", "X3"), predictors.op = op,
+             dependent = "Y", unit.variable = "unit.num", time.variable = "year",
+             treatment.identifier = 7, controls.identifier = c(2, 13, 17, 29),
+             time.predictors.prior = 1984:1989,
+             time.optimize.ssr = 1984:1990, time.plot = 1984:1996)
+  }
+  # user-defined operators have to be visible from the global environment
+  ops <- list(
+    twice_mean   = function(x, na.rm = FALSE) 2 * mean(x, na.rm = na.rm),
+    partial_narm = function(x, na.rm.all = FALSE) mean(x, na.rm = na.rm.all),
+    no_narm      = function(x) mean(x),
+    one_string   = function(x, na.rm = FALSE) "a",
+    stops        = function(x, na.rm = FALSE) stop("boom")
+  )
+  for (nm in names(ops)) assign(nm, ops[[nm]], envir = globalenv())
+  on.exit(rm(list = names(ops), envir = globalenv()), add = TRUE)
+
+  # not one number
+  expect_error(prep("range"), "predictors.op = \"range\" has to return a single number",
+               fixed = TRUE)
+  expect_error(prep("quantile"), "length 5", fixed = TRUE)
+  expect_error(prep("one_string"), "class \"character\" and length 1",
+               fixed = TRUE)
+  # cannot be called with na.rm = TRUE
+  expect_error(prep("no_narm"), "no na.rm argument", fixed = TRUE)
+  expect_error(prep("length"),
+               "predictors.op = \"length\" failed when called as length(x, na.rm = TRUE)",
+               fixed = TRUE)
+  expect_error(prep("sort"),
+               "predictors.op = \"sort\" failed when called as sort(x, na.rm = TRUE)",
+               fixed = TRUE)
+  # the operator's own error is passed on, with the argument named
+  expect_error(prep("stops"), "predictors.op = \"stops\" failed.*boom")
+  # not a name, or no such function
+  expect_error(prep(c("mean", "median")), "single character string")
+  expect_error(prep(median), "single character string")
+  expect_error(prep(NA_character_), "single character string")
+  expect_error(prep(NULL), "single character string")
+  expect_error(prep("no_such_operator"), "no function of that name")
+  expect_error(prep("stats::median"), "bare name", fixed = TRUE)
+
+  # operators that return one number work as before
+  expect_equal(prep("twice_mean")$X0, 2 * prep("mean")$X0)
+  expect_equal(prep("twice_mean")$X1, 2 * prep("mean")$X1)
+  expect_identical(prep("partial_narm")$X0, prep("mean")$X0)
+  expect_identical(prep(factor("mean"))$X0, prep("mean")$X0)
+  expect_type(suppressWarnings(prep("any"))$X0, "logical")
+})
+
+test_that("special predictor operators are checked when they are used", {
+  prep <- function(sp) {
+    dataprep(foo = synth.data, predictors = "X2", dependent = "Y",
+             unit.variable = "unit.num", time.variable = "year",
+             special.predictors = sp,
+             treatment.identifier = 7, controls.identifier = c(2, 13, 17, 29),
+             time.predictors.prior = 1984:1989,
+             time.optimize.ssr = 1984:1990, time.plot = 1984:1996)
+  }
+  expect_error(prep(list(list("Y", 1984:1986, "range"))),
+               "special predictor special.Y.1984.1986: operator = \"range\" has to return a single number",
+               fixed = TRUE)
+  expect_error(prep(list(list("Y", 1984:1986, "no_such_operator"))),
+               "no function of that name")
+  expect_error(prep(list(list("Y", 1984:1986, "length"))),
+               "operator = \"length\" failed when called as length(x, na.rm = TRUE)",
+               fixed = TRUE)
+
+  d <- prep(list(list("Y", 1984:1986, "median")))
+  rows <- synth.data$unit.num == 13 & synth.data$year %in% 1984:1986
+  expect_equal(unname(d$X0["special.Y.1984.1986", "13"]),
+               median(synth.data$Y[rows]))
+
+  # with a single period the operator is not used, so it is not checked
+  d <- prep(list(list("Y", 1985, "no_such_operator")))
+  expect_equal(unname(d$X1["special.Y.1985", "7"]),
+               synth.data$Y[synth.data$unit.num == 7 & synth.data$year == 1985])
+})

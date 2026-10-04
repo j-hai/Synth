@@ -43,7 +43,16 @@ should be minimized (i.e. the periods over which mean squared prediction error (
 }
 \details{ The predictors.op argument is a character string that provides a
   function (eg., "mean", "median", etc.) identifying the name of the
-  operator to be applied to the predictors over the given time period. 
+  operator to be applied to the predictors over the given time period.
+  The function is called as f(x, na.rm = TRUE) on one unit's values of
+  one predictor and has to return a single number. A function of your
+  own has to be defined at top level (or come from an attached
+  package), under a name that base R, Synth, and the packages Synth
+  imports do not already use. dataprep() stops with an explanatory
+  message if the name is not a single character string, no function of
+  that name is found, the function cannot be called with na.rm = TRUE,
+  or it returns anything other than one number (as "range" does, for
+  example).
 
   The special.predictors argument is a list object that contains one or
   more lists of length = 3.  The required components of each of these lists are:
@@ -51,7 +60,9 @@ should be minimized (i.e. the periods over which mean squared prediction error (
   (a) scalar column number or column-name character string associated with that predictor
   (b) vector of time-period number(s) desired (eg., 1998:2003)
   (c) character-string identifying the name of the operation 
-  to be applied (ie., "mean", "median", etc.)
+  to be applied (ie., "mean", "median", etc.). It is used, and checked
+  in the same way as predictors.op, only when (b) holds more than one
+  time period.
 
   eg.,
   special.predictors <- list(list(x1, 1985:1989, "mean"),

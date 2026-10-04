@@ -206,6 +206,10 @@ function(
          for(i in 1:length(predictors)){pred.no <- c(pred.no,which(names(foo) == predictors[i]))}
          predictors <- pred.no
        }
+
+    # operator check
+    op.fun <- .predictor_op(predictors.op, "predictors.op")
+
     # X1 matrix for treated
     X1 <-
       data.frame(foo[
@@ -234,7 +238,7 @@ function(
      }
 
     # aggregate
-    X1 <- apply(X1, 2, paste(predictors.op), na.rm = TRUE)
+    X1 <- apply(X1, 2, op.fun, na.rm = TRUE)
     X1 <- as.matrix(X1)
     rownames(X1) <- names(foo)[predictors]
     colnames(X1) <- treatment.identifier
@@ -275,7 +279,7 @@ function(
      }
 
     X0 <- split(X0[, -dim(X0)[2], drop = FALSE], X0[,dim(X0)[2]])
-    X0 <- sapply(X0, function(x) apply(x, 2, paste(predictors.op), na.rm = TRUE), simplify = TRUE)
+    X0 <- sapply(X0, function(x) apply(x, 2, op.fun, na.rm = TRUE), simplify = TRUE)
     X0 <- as.matrix(X0)
     
     

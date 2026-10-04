@@ -36,6 +36,17 @@
   take a `dataprep()` object (for example in `SCtools` and `MSCMT`)
   see the same change.
 
+* `dataprep()` now checks `predictors.op`, and the operator of any
+  special predictor that spans more than one period, before using
+  it, and stops with a message that names the problem: the operator
+  is not a single character string, no function of that name is
+  found, the function cannot be called with `na.rm = TRUE`, it fails
+  when called, or it does not return a single number (as `"range"`
+  and `"quantile"` do not). These cases used to fail with
+  unrelated-looking errors such as "length of 'dimnames' [1] not
+  equal to array extent". Operators that return one number per
+  predictor and unit behave as before.
+
 * `dataprep()` labeled control units in the order they were listed in
   `controls.identifier`, while the data are always arranged in
   ascending order of unit number. With an unsorted
