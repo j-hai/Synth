@@ -23,7 +23,7 @@ The output of \code{\link{dataprep}} contains a list of matrices. This list obje
   \item{predictors}{A vector of column numbers or column-name character
     strings that identifies the predictors' columns. All predictors have to be numeric.}
   \item{predictors.op}{A character string identifying the method (operator) to be used
-    on the predictors.  Default is "mean". na.rm = T is hardwired into
+    on the predictors, for the treated and the control units alike.  Default is "mean". na.rm = T is hardwired into
     the code. See *Details*.}
   \item{special.predictors}{A list object identifying additional numeric predictors and their associated pre-treatment years and operators (analogous to
     ``predictors.op'' above).  See *Details*.}
@@ -33,7 +33,7 @@ The output of \code{\link{dataprep}} contains a list of matrices. This list obje
   \item{treatment.identifier}{A scalar identifying the ``unit.variable'' number or a character string
     giving the ``unit.name'' of the treated unit. If a character is supplied, a unit.names.variable also has to be supplied to identify the treated unit.}
   \item{controls.identifier }{ A vector identifying the ``unit.variable'' numbers or a vector of character strings giving the ``unit.name''s of control units. If a character is supplied, a unit.names.variable also has to be supplied to identify the control units. The order in which the control units are listed does not matter: the output always holds them in ascending order of their ``unit.variable'' number.}
-  \item{time.predictors.prior }{A numeric vector identifying the pretreatment periods over which the values for the outcome predictors should be averaged.}
+  \item{time.predictors.prior }{A numeric vector identifying the pretreatment periods over which the values of the predictors are aggregated with \code{predictors.op} (averaged, by default).}
   \item{time.optimize.ssr}{A numeric vector identifying the periods of the dependent variable over which the loss function 
 should be minimized (i.e. the periods over which mean squared prediction error (MSPE), that is the sum of squared residuals between treated and the synthetic control unit, are minimized).}
   \item{time.plot}{A vector identifying the periods over which results are to be plotted

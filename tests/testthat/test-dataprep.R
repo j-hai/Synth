@@ -215,3 +215,64 @@ test_that("identifiers given as factors or lists are ordered by value", {
                synth.data$Y[synth.data$unit.num == 7 &
                               synth.data$year %in% 1984:1990])
 })
+
+test_that("predictors.op is applied to the controls as well as the treated unit", {
+  prep <- function(op) {
+    dataprep(foo = synth.data, predictors = c("X1", "X2", "X3"),
+             predictors.op = op, dependent = "Y",
+             unit.variable = "unit.num", time.variable = "year",
+             treatment.identifier = 7,
+             controls.identifier = c(2, 13, 17, 29, 32, 38),
+             time.predictors.prior = 1984:1989,
+             time.optimize.ssr = 1984:1990, time.plot = 1984:1996)
+  }
+  truth <- function(op, unit, var) {
+    rows <- synth.data$unit.num == unit & synth.data$year %in% 1984:1989
+    do.call(op, list(synth.data[[var]][rows], na.rm = TRUE))
+  }
+
+  for (op in c("mean", "median", "max")) {
+    d <- prep(op)
+    for (v in c("X1", "X2", "X3")) {
+      expect_equal(unname(d$X1[v, "7"]), truth(op, 7, v), info = paste(op, v))
+      for (u in colnames(d$X0)) {
+        expect_equal(unname(d$X0[v, u]), truth(op, as.numeric(u), v),
+                     info = paste(op, v, "unit", u))
+      }
+    }
+  }
+  # the operator matters: medians and means differ on these data
+  expect_false(isTRUE(all.equal(prep("median")$X0, prep("mean")$X0)))
+})
+
+test_that("predictors.op sees only the predictors, with missing values dropped", {
+  # one predictor (the transpose branch), with X1 missing in 1980 and 1990
+  notices <- capture.output(d <- dataprep(
+    foo = synth.data, predictors = "X1", predictors.op = "median",
+    dependent = "Y", unit.variable = "unit.num", time.variable = "year",
+    treatment.identifier = 7, controls.identifier = c(29, 2, 13, 17),
+    time.predictors.prior = 1980:1990,
+    time.optimize.ssr = 1984:1990, time.plot = 1984:1996))
+  expect_true(any(grepl("Missing data", notices)))
+  expect_identical(dim(d$X0), c(1L, 4L))
+  expect_identical(colnames(d$X0), c("2", "13", "17", "29"))
+  for (u in colnames(d$X0)) {
+    rows <- synth.data$unit.num == as.numeric(u) & synth.data$year %in% 1980:1990
+    expect_equal(unname(d$X0["X1", u]), median(synth.data$X1[rows], na.rm = TRUE))
+  }
+
+  # an operator that would fail on the unit numbers must never be handed them
+  assign("share01", function(x, na.rm = FALSE) {
+    if (any(x < 0 | x > 1, na.rm = TRUE)) stop("values outside [0, 1]")
+    mean(x, na.rm = na.rm)
+  }, envir = globalenv())
+  on.exit(rm("share01", envir = globalenv()), add = TRUE)
+  d <- dataprep(
+    foo = synth.data, predictors = "X1", predictors.op = "share01",
+    dependent = "Y", unit.variable = "unit.num", time.variable = "year",
+    treatment.identifier = 7, controls.identifier = c(2, 13, 17, 29),
+    time.predictors.prior = 1984:1989,
+    time.optimize.ssr = 1984:1990, time.plot = 1984:1996)
+  rows <- synth.data$unit.num == 13 & synth.data$year %in% 1984:1989
+  expect_equal(unname(d$X0["X1", "13"]), mean(synth.data$X1[rows]))
+})
