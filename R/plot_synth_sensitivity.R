@@ -2,13 +2,20 @@ plot.synth_sensitivity <- function(x, type = c("specification_curve", "paths"), 
   type <- match.arg(type)
   if (type == "specification_curve") {
     tab <- x$summary[order(x$summary$att, na.last = TRUE), ]
+    margins <- graphics::par("mar")
+    margins[1] <- max(margins[1],
+                      max(graphics::strwidth(tab$spec_id, units = "inches")) /
+                        graphics::par("csi") + 3)
+    old_par <- graphics::par(mar = margins)
+    on.exit(graphics::par(old_par), add = TRUE)
     finite <- is.finite(tab$att)
     ylim <- if (any(finite)) range(c(0, tab$att[finite])) else c(-1, 1)
     if (diff(ylim) == 0) ylim <- ylim + c(-1, 1)
     graphics::plot(seq_len(nrow(tab)), rep(NA_real_, nrow(tab)),
-                   ylim = ylim, xaxt = "n", xlab = "Specification",
+                   ylim = ylim, xaxt = "n", xlab = "",
                    ylab = "ATT", ...)
     graphics::axis(1, at = seq_len(nrow(tab)), labels = tab$spec_id, las = 2)
+    graphics::mtext("Specification", side = 1, line = margins[1] - 1)
     graphics::abline(h = 0, col = "grey")
     graphics::points(which(finite), tab$att[finite],
                      pch = ifelse(tab$status[finite] == "warning", 4, 16))
