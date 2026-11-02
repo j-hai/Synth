@@ -137,8 +137,10 @@ effects without placing them at arbitrary values.
 
 `validation_paths`, `validation_weights` and `validation_warnings` identify both
 the specification and fold. `validation_registry`, `validation_fits` and
-`validation_prepared` preserve clipped configurations and native objects nested
-by those IDs. With `synth_data`, the internal treatment date of a fold preparation
+`validation_prepared` preserve attempted configurations and native objects nested
+by those IDs. Configurations retain their original windows when the original
+design fails its checks; otherwise they record the clipped training windows.
+With `synth_data`, the internal treatment date of a fold preparation
 object denotes its forecast origin. For either interface, the first held-out
 period is recorded in `metadata$validation_windows`.
 The main metadata and policy estimates retain the original

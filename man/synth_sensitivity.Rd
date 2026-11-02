@@ -141,9 +141,10 @@ specification, preserving predictor weights and optimizer diagnostics.}
 earlier periods, not just periods used in the fitting objective.}
 \item{validation_paths, validation_weights, validation_warnings}{Held-out
 trajectories, donor weights and warnings with specification and fold IDs.}
-\item{validation_registry, validation_fits, validation_prepared}{Clipped
+\item{validation_registry, validation_fits, validation_prepared}{Attempted
 configurations and native fitting/preparation objects, nested by specification
-and fold ID. Failed configurations remain in the registry.}
+and fold ID. Configurations retain their original windows if the original
+design fails its checks; otherwise they record the clipped training windows.}
 \item{metadata}{Common periods, exclusions, interface, package version and
 resolved solver arguments.}
 }

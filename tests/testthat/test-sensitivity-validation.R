@@ -201,6 +201,22 @@ test_that("default pools and named treated units keep the original donors", {
   }
 })
 
+test_that("folds preserve the native minimum donor requirement", {
+  data(smoking)
+  panel <- smoking[smoking$state_id %in% c(1, 3), ]
+  for (controls in list(NULL, 1)) {
+    baseline <- sensitivity_baseline()
+    baseline$controls <- controls
+    res <- synth_sensitivity(panel, baseline, list(), 1989:2000,
+      validation_windows = list(1984:1988)
+    )
+    expect_equal(res$estimates$status, "failed")
+    expect_equal(res$validation$status, "failed")
+    expect_true(is.na(res$estimates$validation_rmse))
+    expect_match(res$validation$message, "at least two control units")
+  }
+})
+
 test_that("fold warnings keep scores and preserve final-fit status", {
   data(smoking)
   original <- synth
