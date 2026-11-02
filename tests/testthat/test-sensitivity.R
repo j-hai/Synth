@@ -170,10 +170,12 @@ test_that("solver warnings retain finite estimates and diagnostics", {
 })
 
 test_that("ipop nonconvergence is exposed without changing its weights", {
-  H <- diag(3)
+  hessian <- diag(3)
   cvec <- c(-1, -2, -3)
   pars <- list(maxiter = 1)
-  expect_warning(w <- Synth:::.solve_w_ipop(H, cvec, pars), "did not converge")
+  expect_warning(
+    w <- Synth:::.solve_w_ipop(hessian, cvec, pars), "did not converge"
+  )
   expect_true(all(is.finite(w)))
 })
 
