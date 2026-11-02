@@ -2,7 +2,7 @@ plot.synth_sensitivity <- function(x, type = c("specification_curve", "paths"),
                                    ...) {
   type <- match.arg(type)
   if (type == "specification_curve") {
-    tab <- x$summary[order(x$summary$att, na.last = TRUE), ]
+    tab <- x$estimates[order(x$estimates$att, na.last = TRUE), ]
     margins <- graphics::par("mar")
     margins[1] <- max(
       margins[1],
@@ -35,7 +35,7 @@ plot.synth_sensitivity <- function(x, type = c("specification_curve", "paths"),
   } else {
     if (!nrow(x$paths)) {
       graphics::plot.new()
-      graphics::text(.5, .5, paste(nrow(x$summary), "attempts; all failed"))
+      graphics::text(.5, .5, paste(nrow(x$estimates), "attempts; all failed"))
     } else {
       paths <- split(x$paths, x$paths$spec_id)
       first <- paths[[1]]

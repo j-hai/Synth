@@ -95,7 +95,7 @@ are logged as failed designs.
 \value{
 \code{synth_sensitivity()} returns an S3 object with:
 \describe{
-\item{summary}{Data frame with \code{spec_id}, \code{att}, \code{pre_rmse},
+\item{estimates}{Data frame with \code{spec_id}, \code{att}, \code{pre_rmse},
 \code{fit_rmse}, \code{n_donors} and \code{status}, one row per attempt.}
 \item{paths}{Tidy data frame of observed, synthetic and gap trajectories.}
 \item{weights}{Tidy data frame of unrounded donor weights.}
@@ -107,7 +107,7 @@ specification, preserving predictor weights and optimizer diagnostics.}
 resolved solver arguments.}
 }
 \code{summary()} returns a one-row dispersion data frame.
-\code{as.data.frame()} returns the per-specification summary table.
+\code{as.data.frame()} returns \code{estimates}, the per-specification table.
 \code{print()} and \code{plot()} return their input invisibly.
 }
 \seealso{\code{\link{synth_data}}, \code{\link{dataprep}}, \code{\link{synth}}}

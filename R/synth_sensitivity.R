@@ -51,12 +51,9 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
     stop("The initial sensitivity interface supports quadopt = 'ipop' only")
   }
 
-  unit_col <- baseline[[
-    if (interface == "synth_data") "unit_col" else "unit.variable"
-  ]]
-  time_col <- baseline[[
-    if (interface == "synth_data") "time_col" else "time.variable"
-  ]]
+  layout <- .sensitivity_interface(interface)
+  unit_col <- baseline[[layout$unit]]
+  time_col <- baseline[[layout$time]]
   if (length(unit_col) != 1 || length(time_col) != 1 ||
         !all(c(unit_col, time_col) %in% names(panel))) {
     stop("baseline must name the unit and time columns")
@@ -88,29 +85,22 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
   }
 
   base <- baseline
-  if (interface == "synth_data") {
-    if (is.null(base$pre_periods)) base$pre_periods <- pre
-    if (is.null(base$plot_periods)) base$plot_periods <- times
-    fields <- c(
-      "controls", "predictors", "predictors.op", "special_predictors",
-      "pre_periods"
-    )
-    period_fields <- "pre_periods"
-    special_field <- "special_predictors"
-    plot_field <- "plot_periods"
-  } else {
-    if (is.null(base$time.plot)) base$time.plot <- times
-    fields <- c(
-      "controls.identifier", "predictors", "predictors.op",
-      "special.predictors", "time.predictors.prior", "time.optimize.ssr"
-    )
-    period_fields <- c("time.predictors.prior", "time.optimize.ssr")
-    special_field <- "special.predictors"
-    plot_field <- "time.plot"
+  if (!is.null(layout$treatment) && is.null(base[[layout$periods]])) {
+    base[[layout$periods]] <- pre
   }
-  if (!identical(as.numeric(base[[plot_field]]), as.numeric(times))) {
+  if (is.null(base[[layout$plot]])) base[[layout$plot]] <- times
+  fields <- c(
+    layout$controls, "predictors", "predictors.op",
+    layout$special, layout$periods
+  )
+  if (!identical(as.numeric(base[[layout$plot]]), as.numeric(times))) {
     stop("Baseline plotting periods must cover the full observed trajectory")
   }
+  context <- list(
+    layout = layout, unit_col = unit_col, time_col = time_col,
+    times = times, treatment_time = treatment_time,
+    synth_args = synth_args, excluded_donors = excluded_donors
+  )
   registry <- lapply(specifications, function(overrides) {
     cfg <- base
     cfg[names(overrides)] <- overrides
@@ -133,13 +123,40 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
   fits <- list()
   prepared <- list()
 
-  check_periods <- function(x, name) {
-    if (!length(x) || anyNA(x) || anyDuplicated(x) || any(!x %in% times) ||
-          any(x >= treatment_time)) {
+  check_design <- function(cfg, overrides, name) {
+    if (!is.list(overrides) || (length(overrides) && (
+      is.null(names(overrides)) || any(!nzchar(names(overrides))) ||
+        anyDuplicated(names(overrides))
+    ))) {
+      stop("Overrides must be a named list")
+    }
+    fixed <- setdiff(names(overrides), fields)
+    unchanged <- vapply(
+      fixed, function(k) identical(overrides[[k]], base[[k]]), logical(1)
+    )
+    if (any(!unchanged)) {
       stop(paste(
-        name, "must contain unique observed strictly pre-treatment periods"
+        "Only design fields may vary;",
+        "study identity and solver settings are fixed"
       ))
     }
+    if (name == "baseline" && length(overrides)) {
+      stop("The baseline cannot contain overrides")
+    }
+    if (!is.null(synth_args$custom.v) &&
+          any(c("predictors", layout$special) %in% names(overrides))) {
+      stop("custom.v requires fixed predictors and special predictors")
+    }
+    if (anyDuplicated(cfg[[layout$controls]])) {
+      stop("Donor identifiers must be unique")
+    }
+  }
+  summarize <- function(gap, fit_periods) {
+    list(
+      att = mean(gap[match(att_periods, times)]),
+      pre_rmse = .sensitivity_rms(gap[match(pre, times)]),
+      fit_rmse = .sensitivity_rms(gap[match(fit_periods, times)])
+    )
   }
   for (name in names(registry)) {
     cfg <- registry[[name]]
@@ -148,136 +165,40 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
       spec_id = name, att = NA_real_, pre_rmse = NA_real_,
       fit_rmse = NA_real_, n_donors = NA_integer_, status = "failed"
     )
-    fit_warnings <- character()
-    output <- tryCatch(withCallingHandlers(
-      {
-        if (!is.list(overrides) || (length(overrides) && (
-          is.null(names(overrides)) || any(!nzchar(names(overrides))) ||
-            anyDuplicated(names(overrides))
-        ))) {
-          stop("Overrides must be a named list")
-        }
-        fixed <- setdiff(names(overrides), fields)
-        unchanged <- vapply(
-          fixed, function(k) identical(overrides[[k]], base[[k]]), logical(1)
-        )
-        if (any(!unchanged)) {
-          stop(paste(
-            "Only design fields may vary;",
-            "study identity and solver settings are fixed"
-          ))
-        }
-        if (name == "baseline" && length(overrides)) {
-          stop("The baseline cannot contain overrides")
-        }
-        if (!is.null(synth_args$custom.v) &&
-              any(c("predictors", special_field) %in% names(overrides))) {
-          stop("custom.v requires fixed predictors and special predictors")
-        }
-        for (field in period_fields) check_periods(cfg[[field]], field)
-        for (special in cfg[[special_field]]) {
-          if (length(special) != 3) {
-            stop("Each special predictor must have three entries")
-          }
-          check_periods(special[[2]], special_field)
-        }
-        controls <- cfg[[
-          if (interface == "synth_data") "controls" else "controls.identifier"
-        ]]
-        if (anyDuplicated(controls)) stop("Donor identifiers must be unique")
-        dp <- if (interface == "synth_data") {
-          do.call(synth_data, c(list(panel = panel), cfg))
-        } else {
-          do.call(dataprep, c(list(foo = panel), cfg))
-        }
-        donor_ids <- as.numeric(colnames(dp$Y0plot))
-        row$n_donors <- length(donor_ids)
-        if (any(donor_ids %in% excluded_donors)) {
-          stop("Donor pool contains a declared treated or contaminated donor")
-        }
-        if (!all(is.finite(c(dp$Y0plot, dp$Y1plot)))) {
-          stop("All common trajectory periods require finite outcomes")
-        }
-        if (!identical(as.numeric(rownames(dp$Y0plot)), as.numeric(times))) {
-          stop("Prepared data changed the common trajectory periods")
-        }
-        fit <- do.call(synth, c(list(data.prep.obj = dp), synth_args))
-        optimizer <- if (is.list(fit$rgV.optim)) fit$rgV.optim$out.list
-        if (!is.null(optimizer) && !is.null(optimizer$convcode) &&
-              any(optimizer$convcode != 0, na.rm = TRUE)) {
-          selected <- if (isTRUE(optimizer$convcode[1] == 0)) {
-            "converged"
-          } else {
-            "was not confirmed converged"
-          }
-          warning(paste(
-            "Predictor-weight search included nonconverged candidates;",
-            "the selected candidate", selected
-          ))
-        }
-        donor_order <- match(colnames(dp$Y0plot), rownames(fit$solution.w))
-        w <- fit$solution.w[donor_order, 1]
-        if (!all(is.finite(c(w, unlist(fit$solution.v))))) {
-          stop("Estimator returned nonfinite weights")
-        }
-        synthetic <- as.numeric(dp$Y0plot %*% w)
-        observed <- as.numeric(dp$Y1plot)
-        gap <- observed - synthetic
-        if (!all(is.finite(gap))) {
-          stop("Estimator returned a nonfinite trajectory")
-        }
-        fit_periods <- match(dp$tag$time.optimize.ssr, times)
-        statistics <- list(
-          att = mean(gap[match(att_periods, times)]),
-          pre_rmse = .sensitivity_rms(gap[match(pre, times)]),
-          fit_rmse = .sensitivity_rms(gap[fit_periods])
-        )
-        if (!all(is.finite(unlist(statistics)))) {
-          stop("Estimator returned nonfinite summary statistics")
-        }
-        row[names(statistics)] <- statistics
-        list(
-          row = row, fit = fit, dp = dp,
-          paths = data.frame(
-            spec_id = name, time = times, observed = observed,
-            synthetic = synthetic, gap = gap
-          ),
-          weights = data.frame(
-            spec_id = name, donor = colnames(dp$Y0plot), weight = as.numeric(w)
-          )
-        )
+    output <- .sensitivity_fit(
+      panel, cfg, context,
+      configure = function(cfg) {
+        check_design(cfg, overrides, name)
+        cfg
       },
-      warning = function(w) {
-        fit_warnings <<- c(fit_warnings, conditionMessage(w))
-        invokeRestart("muffleWarning")
-      }
-    ), error = function(e) e)
-    if (inherits(output, "error")) {
+      summarize = summarize
+    )
+    row$n_donors <- output$n_donors
+    row$status <- output$status
+    if (output$status == "failed") {
       failures <- rbind(failures, data.frame(
-        spec_id = name,
-        exception_type = class(output)[1], message = conditionMessage(output)
+        spec_id = name, exception_type = output$exception_type,
+        message = output$message
       ))
     } else {
-      row <- output$row
-      row$status <- if (length(fit_warnings)) "warning" else "ok"
+      row[names(output$statistics)] <- output$statistics
       fits[[name]] <- output$fit
-      prepared[[name]] <- output$dp
-      paths <- rbind(paths, output$paths)
-      weights <- rbind(weights, output$weights)
+      prepared[[name]] <- output$prepared
+      paths <- rbind(paths, cbind(spec_id = name, output$paths))
+      weights <- rbind(weights, cbind(spec_id = name, output$weights))
     }
-    if (length(fit_warnings)) {
+    if (length(output$warnings)) {
       warning_log <- rbind(warning_log, data.frame(
-        spec_id = name,
-        warning_type = "warning", message = fit_warnings
+        spec_id = name, warning_type = "warning", message = output$warnings
       ))
     }
     summaries[[name]] <- row
   }
-  summary_table <- do.call(rbind, summaries)
-  rownames(summary_table) <- NULL
+  estimates <- do.call(rbind, summaries)
+  rownames(estimates) <- NULL
   structure(
     list(
-      summary = summary_table, paths = paths, weights = weights,
+      estimates = estimates, paths = paths, weights = weights,
       failures = failures, warnings = warning_log, registry = registry,
       baseline = baseline, fits = fits, prepared = prepared,
       metadata = list(
@@ -317,11 +238,11 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
 }
 
 summary.synth_sensitivity <- function(object, ...) {
-  effects <- object$summary$att[is.finite(object$summary$att)]
+  effects <- object$estimates$att[is.finite(object$estimates$att)]
   data.frame(
-    attempted = nrow(object$summary), estimated = length(effects),
-    failed = sum(object$summary$status == "failed"),
-    with_warnings = sum(object$summary$status == "warning"),
+    attempted = nrow(object$estimates), estimated = length(effects),
+    failed = sum(object$estimates$status == "failed"),
+    with_warnings = sum(object$estimates$status == "warning"),
     min = if (length(effects)) min(effects) else NA_real_,
     median = if (length(effects)) stats::median(effects) else NA_real_,
     max = if (length(effects)) max(effects) else NA_real_,
@@ -340,5 +261,5 @@ print.synth_sensitivity <- function(x, ...) {
 
 as.data.frame.synth_sensitivity <- function(x, row.names = NULL,
                                             optional = FALSE, ...) {
-  as.data.frame(x$summary, row.names = row.names, optional = optional, ...)
+  as.data.frame(x$estimates, row.names = row.names, optional = optional, ...)
 }
