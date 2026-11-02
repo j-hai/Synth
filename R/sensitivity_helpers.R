@@ -3,7 +3,7 @@
     list(
       unit = "unit_col", time = "time_col", controls = "controls",
       periods = "pre_periods", special = "special_predictors",
-      plot = "plot_periods", treatment = "treatment_time",
+      plot = "plot_periods",
       prepare = function(panel, cfg) {
         do.call(synth_data, c(list(panel = panel), cfg))
       },
@@ -25,7 +25,7 @@
       unit = "unit.variable", time = "time.variable",
       controls = "controls.identifier",
       periods = c("time.predictors.prior", "time.optimize.ssr"),
-      special = "special.predictors", plot = "time.plot", treatment = NULL,
+      special = "special.predictors", plot = "time.plot",
       prepare = function(panel, cfg) {
         do.call(dataprep, c(list(foo = panel), cfg))
       },
