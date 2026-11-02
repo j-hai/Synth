@@ -1,7 +1,9 @@
 synth_sensitivity <- function(panel, baseline, specifications, att_periods,
                               synth_args = list(), excluded_donors = numeric(),
                               interface = c("synth_data", "dataprep"),
-                              treatment_time = baseline$treatment_time) {
+                              treatment_time = baseline$treatment_time,
+                              validation_windows = NULL,
+                              validation_max_rmse = NULL) {
   interface <- match.arg(interface)
   if (!is.data.frame(panel) || !is.list(baseline) || !is.list(specifications)) {
     stop(
@@ -76,6 +78,9 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
         any(att_periods < treatment_time)) {
     stop("att_periods must be unique observed post-treatment periods")
   }
+  windows <- .sensitivity_windows(
+    validation_windows, pre, validation_max_rmse
+  )
   spec_names <- names(specifications)
   if (length(specifications) && (
     is.null(spec_names) || anyNA(spec_names) ||
@@ -141,6 +146,47 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
       ))
     }
   }
+  check_design <- function(cfg, overrides, name) {
+    if (!is.list(overrides) || (length(overrides) && (
+      is.null(names(overrides)) || any(!nzchar(names(overrides))) ||
+        anyDuplicated(names(overrides))
+    ))) {
+      stop("Overrides must be a named list")
+    }
+    fixed <- setdiff(names(overrides), fields)
+    unchanged <- vapply(
+      fixed, function(k) identical(overrides[[k]], base[[k]]), logical(1)
+    )
+    if (any(!unchanged)) {
+      stop(paste(
+        "Only design fields may vary;",
+        "study identity and solver settings are fixed"
+      ))
+    }
+    if (name == "baseline" && length(overrides)) {
+      stop("The baseline cannot contain overrides")
+    }
+    if (!is.null(synth_args$custom.v) &&
+          any(c("predictors", special_field) %in% names(overrides))) {
+      stop("custom.v requires fixed predictors and special predictors")
+    }
+    for (field in period_fields) check_periods(cfg[[field]], field)
+    for (special in cfg[[special_field]]) {
+      if (length(special) != 3) {
+        stop("Each special predictor must have three entries")
+      }
+      check_periods(special[[2]], special_field)
+    }
+    controls <- cfg[[
+      if (interface == "synth_data") "controls" else "controls.identifier"
+    ]]
+    if (anyDuplicated(controls)) stop("Donor identifiers must be unique")
+  }
+  validation <- .sensitivity_validate(
+    panel, registry, specifications, windows, times, unit_col, time_col,
+    period_fields, special_field, plot_field, interface, synth_args,
+    excluded_donors, check_design
+  )
   for (name in names(registry)) {
     cfg <- registry[[name]]
     overrides <- specifications[[name]]
@@ -151,40 +197,7 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
     fit_warnings <- character()
     output <- tryCatch(withCallingHandlers(
       {
-        if (!is.list(overrides) || (length(overrides) && (
-          is.null(names(overrides)) || any(!nzchar(names(overrides))) ||
-            anyDuplicated(names(overrides))
-        ))) {
-          stop("Overrides must be a named list")
-        }
-        fixed <- setdiff(names(overrides), fields)
-        unchanged <- vapply(
-          fixed, function(k) identical(overrides[[k]], base[[k]]), logical(1)
-        )
-        if (any(!unchanged)) {
-          stop(paste(
-            "Only design fields may vary;",
-            "study identity and solver settings are fixed"
-          ))
-        }
-        if (name == "baseline" && length(overrides)) {
-          stop("The baseline cannot contain overrides")
-        }
-        if (!is.null(synth_args$custom.v) &&
-              any(c("predictors", special_field) %in% names(overrides))) {
-          stop("custom.v requires fixed predictors and special predictors")
-        }
-        for (field in period_fields) check_periods(cfg[[field]], field)
-        for (special in cfg[[special_field]]) {
-          if (length(special) != 3) {
-            stop("Each special predictor must have three entries")
-          }
-          check_periods(special[[2]], special_field)
-        }
-        controls <- cfg[[
-          if (interface == "synth_data") "controls" else "controls.identifier"
-        ]]
-        if (anyDuplicated(controls)) stop("Donor identifiers must be unique")
+        check_design(cfg, overrides, name)
         dp <- if (interface == "synth_data") {
           do.call(synth_data, c(list(panel = panel), cfg))
         } else {
@@ -275,18 +288,44 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
   }
   summary_table <- do.call(rbind, summaries)
   rownames(summary_table) <- NULL
+  if (length(windows)) {
+    summary_table$validation_rmse <- NA_real_
+    summary_table$validation_status <- "failed"
+    for (i in seq_len(nrow(summary_table))) {
+      name <- summary_table$spec_id[i]
+      folds <- validation$validation[validation$validation$spec_id == name, ]
+      if (!any(folds$status == "failed")) {
+        paths_subset <- validation$validation_paths[
+          validation$validation_paths$spec_id == name,
+        ]
+        summary_table$validation_rmse[i] <- .sensitivity_rms(paths_subset$gap)
+        has_warning <- any(folds$status == "warning")
+        summary_table$validation_status[i] <- if (has_warning) {
+          "warning"
+        } else {
+          "ok"
+        }
+      }
+    }
+    if (!is.null(validation_max_rmse)) {
+      summary_table$validation_pass <-
+        is.finite(summary_table$validation_rmse) &
+        summary_table$validation_rmse <= validation_max_rmse
+    }
+  }
   structure(
-    list(
+    c(list(
       summary = summary_table, paths = paths, weights = weights,
       failures = failures, warnings = warning_log, registry = registry,
       baseline = baseline, fits = fits, prepared = prepared,
       metadata = list(
+        validation_windows = windows, validation_max_rmse = validation_max_rmse,
         treatment_time = treatment_time, att_periods = att_periods,
         pre_periods = pre, synth_args = synth_args,
         excluded_donors = excluded_donors, interface = interface,
         version = as.character(utils::packageVersion("Synth"))
       )
-    ),
+    ), validation),
     class = "synth_sensitivity"
   )
 }
@@ -316,7 +355,15 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
   if (is.finite(value)) value else NA_real_
 }
 
-summary.synth_sensitivity <- function(object, ...) {
+summary.synth_sensitivity <- function(object, validation_only = FALSE, ...) {
+  if (validation_only) {
+    if (is.null(object$metadata$validation_max_rmse)) {
+      stop("Declare validation_max_rmse before fitting to summarize its subset")
+    }
+    object$summary <- object$summary[
+      object$summary$validation_pass, , drop = FALSE
+    ]
+  }
   effects <- object$summary$att[is.finite(object$summary$att)]
   data.frame(
     attempted = nrow(object$summary), estimated = length(effects),

@@ -14,12 +14,13 @@ unit, treatment date, outcome and ATT evaluation periods remain fixed.
 synth_sensitivity(panel, baseline, specifications, att_periods,
   synth_args = list(), excluded_donors = numeric(),
   interface = c("synth_data", "dataprep"),
-  treatment_time = baseline$treatment_time)
+  treatment_time = baseline$treatment_time,
+  validation_windows = NULL, validation_max_rmse = NULL)
 
-\method{summary}{synth_sensitivity}(object, ...)
+\method{summary}{synth_sensitivity}(object, validation_only = FALSE, ...)
 \method{print}{synth_sensitivity}(x, ...)
 \method{plot}{synth_sensitivity}(x,
-  type = c("specification_curve", "paths"), ...)
+  type = c("specification_curve", "paths", "validation"), ...)
 \method{as.data.frame}{synth_sensitivity}(x, row.names = NULL,
   optional = FALSE, ...)
 }
@@ -46,8 +47,17 @@ an excluded donor fails.}
 \item{interface}{Preparation function whose argument names to use.}
 \item{treatment_time}{First treated period. Defaults to the baseline's value
 for \code{synth_data}; required for \code{dataprep}.}
+\item{validation_windows}{Optional nonempty list of unique, disjoint observed
+pre-treatment period vectors, each with earlier training observations. Windows
+are evaluated in chronological order. Declare these before inspecting effects.}
+\item{validation_max_rmse}{Optional finite nonnegative cutoff declared with
+the windows before fitting. Adds a descriptive \code{validation_pass} flag;
+all results remain available.}
+\item{validation_only}{Summarize only designs passing the declared validation
+cutoff. Requires \code{validation_max_rmse} to have been supplied when fitting.}
 \item{x, object}{A \code{synth_sensitivity} result.}
-\item{type}{Plot all attempted effects or fitted trajectories.}
+\item{type}{Plot all attempted effects, fitted trajectories, or policy effects
+against pre-treatment validation RMSE.}
 \item{row.names, optional}{Arguments passed to \code{as.data.frame()}.}
 \item{...}{Additional arguments; passed to the initial \code{plot()} call
 or \code{as.data.frame()} where applicable.}
@@ -84,8 +94,28 @@ when fewer than two estimates are finite or its value exceeds the floating-point
 range. These are descriptive shares
 among registered designs, not causal probabilities. Their dispersion does not
 form a confidence interval. This varies designs for the original treated unit;
-it is separate from in-space placebo inference. Pre-treatment holdout validation
-is not part of this interface.
+it is separate from in-space placebo inference.
+
+With \code{validation_windows}, each design is fitted afresh using only periods
+strictly earlier than the first held-out period. The original design must be
+admissible before its fitting, predictor-aggregation and special-predictor
+windows are intersected with this earlier history. An empty required window
+fails that fold; no predictor or donor is dropped. Predictor weights are
+reestimated on the earlier data. Held-out outcomes are used only for scoring.
+Later folds may train on observations held out by earlier folds.
+
+Each design is then independently refitted using its original configuration
+to estimate the policy effect. The policy date and ATT periods remain fixed.
+With \code{synth_data}, fold preparation objects record the first held-out
+period as their internal forecast origin; this does not change the policy date
+in the main result. For either interface, the fold's first period is available
+in \code{metadata$validation_windows}.
+The aggregate \code{validation_rmse} pools squared gaps over all held-out
+periods with equal weight per period. If any fold fails, the aggregate is
+missing and \code{validation_status} is \code{failed}. Finite scores with
+warnings are retained and marked \code{warning}. The validation plot names
+designs with missing effects or scores without assigning coordinates to them.
+Good pre-treatment forecasting cannot establish causal identification.
 
 RMS summaries are scaled before squaring to avoid intermediate overflow.
 ATT uses base R's \code{mean}; cancellation among extreme mixed-sign gaps can
@@ -96,13 +126,24 @@ are logged as failed designs.
 \code{synth_sensitivity()} returns an S3 object with:
 \describe{
 \item{summary}{Data frame with \code{spec_id}, \code{att}, \code{pre_rmse},
-\code{fit_rmse}, \code{n_donors} and \code{status}, one row per attempt.}
+\code{fit_rmse}, \code{n_donors} and \code{status}, one row per attempt.
+When validation is requested, also includes \code{validation_rmse},
+\code{validation_status} and, if a cutoff was declared, \code{validation_pass}.}
 \item{paths}{Tidy data frame of observed, synthetic and gap trajectories.}
 \item{weights}{Tidy data frame of unrounded donor weights.}
 \item{failures, warnings}{Data frames preserving exceptions and warnings.}
 \item{registry, baseline}{Merged configurations and the original baseline.}
 \item{fits, prepared}{Native \code{synth()} and preparation objects keyed by
 specification, preserving predictor weights and optimizer diagnostics.}
+\item{validation}{One row per design and fold: \code{spec_id}, \code{fold_id},
+\code{rmse}, \code{n_train}, \code{n_validation}, \code{status},
+\code{exception_type} and \code{message}. Training counts describe available
+earlier periods, not just periods used in the fitting objective.}
+\item{validation_paths, validation_weights, validation_warnings}{Held-out
+trajectories, donor weights and warnings with specification and fold IDs.}
+\item{validation_registry, validation_fits, validation_prepared}{Clipped
+configurations and native fitting/preparation objects, nested by specification
+and fold ID. Failed configurations remain in the registry.}
 \item{metadata}{Common periods, exclusions, interface, package version and
 resolved solver arguments.}
 }

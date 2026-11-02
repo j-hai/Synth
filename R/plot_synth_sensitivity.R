@@ -1,4 +1,6 @@
-plot.synth_sensitivity <- function(x, type = c("specification_curve", "paths"),
+plot.synth_sensitivity <- function(x,
+                                   type = c("specification_curve", "paths",
+                                            "validation"),
                                    ...) {
   type <- match.arg(type)
   if (type == "specification_curve") {
@@ -26,13 +28,15 @@ plot.synth_sensitivity <- function(x, type = c("specification_curve", "paths"),
     )
     if (any(!finite)) {
       graphics::text(
-        which(!finite), graphics::par("usr")[3], "failed", pos = 3, srt = 90
+        which(!finite), graphics::par("usr")[3], "failed",
+        pos = 3, srt = 90
       )
     }
     graphics::mtext(
-      "x: fit with warnings; failed: no estimate", side = 3, cex = .8
+      "x: fit with warnings; failed: no estimate",
+      side = 3, cex = .8
     )
-  } else {
+  } else if (type == "paths") {
     if (!nrow(x$paths)) {
       graphics::plot.new()
       graphics::text(.5, .5, paste(nrow(x$summary), "attempts; all failed"))
@@ -46,7 +50,8 @@ plot.synth_sensitivity <- function(x, type = c("specification_curve", "paths"),
       )
       for (i in seq_along(paths)) {
         graphics::lines(
-          paths[[i]]$time, paths[[i]]$synthetic, col = i + 1, lty = 2
+          paths[[i]]$time, paths[[i]]$synthetic,
+          col = i + 1, lty = 2
         )
       }
       graphics::abline(v = x$metadata$treatment_time, lty = 3)
@@ -60,6 +65,40 @@ plot.synth_sensitivity <- function(x, type = c("specification_curve", "paths"),
         side = 3, cex = .8
       )
     }
+  } else {
+    .plot_sensitivity_validation(x, ...)
+  }
+  invisible(x)
+}
+
+.plot_sensitivity_validation <- function(x, ...) {
+  if (!length(x$metadata$validation_windows)) {
+    stop("Declare validation_windows before fitting")
+  }
+  tab <- x$summary
+  finite <- is.finite(tab$att) & is.finite(tab$validation_rmse)
+  limit <- x$metadata$validation_max_rmse
+  graphics::plot(tab$validation_rmse[finite], tab$att[finite],
+    xlim = range(c(0, limit, tab$validation_rmse[finite])),
+    ylim = range(c(0, tab$att[finite])),
+    xlab = "Pre-treatment validation RMSE", ylab = "ATT",
+    pch = ifelse(
+      tab$status[finite] == "warning" |
+        tab$validation_status[finite] == "warning", 4, 16
+    ), ...
+  )
+  if (any(finite)) {
+    graphics::text(tab$validation_rmse[finite], tab$att[finite],
+      labels = tab$spec_id[finite], pos = rep(c(3, 1), length.out = sum(finite))
+    )
+  }
+  graphics::abline(h = 0, col = "grey")
+  if (!is.null(limit)) graphics::abline(v = limit, col = "grey", lty = 2)
+  if (any(!finite)) {
+    graphics::mtext(paste(
+      "ATT or validation unavailable:",
+      paste(tab$spec_id[!finite], collapse = ", ")
+    ), side = 3, cex = .8)
   }
   invisible(x)
 }

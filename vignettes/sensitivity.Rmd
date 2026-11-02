@@ -97,7 +97,55 @@ advanced <- synth_sensitivity(
 as.data.frame(advanced)
 ```
 
-This initial interface supports deterministic `ipop` fits. Pre-treatment
-holdout validation and other solver backends need separate checks before being
-added. Existing placebo inference remains a separate analysis: it changes the
-putatively treated unit, while this registry changes its research design.
+## Check pre-treatment prediction
+
+Choose held-out periods and any error cutoff before inspecting policy effects.
+For each fold, the runner intersects each design's fitting and predictor windows
+with observations strictly earlier than the first held-out period. Predictor
+weights are reestimated using that earlier information. It then scores predictions
+in the held-out window and independently refits the original design for the policy
+effect. An empty matching window fails the fold; it does not remove a predictor
+or substitute a different fitting window.
+
+```{r validation}
+validated <- synth_sensitivity(
+  smoking, baseline, specifications, att_periods = 1989:2000,
+  validation_windows = list(1984:1988), validation_max_rmse = 20
+)
+as.data.frame(validated)
+validated$validation
+plot(validated, type = "validation")
+summary(validated, validation_only = TRUE)
+```
+
+The cutoff of 20 cigarette packs per capita illustrates the interface; it is not a
+recommended threshold. `short_pre` has no fitting observations before 1984,
+so its validation fails while its final policy fit remains available. No results
+are removed. `summary(validated)` describes the full registry;
+`validation_only = TRUE` describes the subset passing the declared cutoff.
+
+For rolling-origin validation, supply, for example,
+`validation_windows = list(1982:1984, 1985:1988)`. Windows must be disjoint and
+strictly pre-treatment. Each fold uses only information available before its
+first period; later folds may use earlier held-out observations for training.
+The aggregate `validation_rmse` pools all held-out squared gaps with equal
+weight per period. If any fold fails, the aggregate is missing. Warning-bearing
+finite scores remain available. The plot names designs with missing scores or
+effects without placing them at arbitrary values.
+
+`validation_paths`, `validation_weights` and `validation_warnings` identify both
+the specification and fold. `validation_registry`, `validation_fits` and
+`validation_prepared` preserve clipped configurations and native objects nested
+by those IDs. With `synth_data`, the internal treatment date of a fold preparation
+object denotes its forecast origin. For either interface, the first held-out
+period is recorded in `metadata$validation_windows`.
+The main metadata and policy estimates retain the original
+treatment date and ATT periods.
+
+Users remain responsible for ensuring that precomputed columns contain no future
+information. Similar predictive performance does not establish that designs are
+equally credible, and the subset's dispersion is not a confidence interval.
+
+This interface supports deterministic `ipop` fits. Existing placebo inference
+remains a separate analysis: it changes the putatively treated unit, while this
+registry changes its research design.
