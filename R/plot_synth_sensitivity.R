@@ -4,7 +4,7 @@ plot.synth_sensitivity <- function(x,
                                    ...) {
   type <- match.arg(type)
   if (type == "specification_curve") {
-    tab <- x$summary[order(x$summary$att, na.last = TRUE), ]
+    tab <- x$estimates[order(x$estimates$att, na.last = TRUE), ]
     margins <- graphics::par("mar")
     margins[1] <- max(
       margins[1],
@@ -22,7 +22,7 @@ plot.synth_sensitivity <- function(x,
     )
     graphics::axis(1, at = seq_len(nrow(tab)), labels = tab$spec_id, las = 2)
     graphics::mtext("Specification", side = 1, line = margins[1] - 1)
-    graphics::abline(h = 0, col = "grey")
+    graphics::abline(h = 0, col = "gray")
     graphics::points(which(finite), tab$att[finite],
       pch = ifelse(tab$status[finite] == "warning", 4, 16)
     )
@@ -39,7 +39,7 @@ plot.synth_sensitivity <- function(x,
   } else if (type == "paths") {
     if (!nrow(x$paths)) {
       graphics::plot.new()
-      graphics::text(.5, .5, paste(nrow(x$summary), "attempts; all failed"))
+      graphics::text(.5, .5, paste(nrow(x$estimates), "attempts; all failed"))
     } else {
       paths <- split(x$paths, x$paths$spec_id)
       first <- paths[[1]]
@@ -75,7 +75,7 @@ plot.synth_sensitivity <- function(x,
   if (!length(x$metadata$validation_windows)) {
     stop("Declare validation_windows before fitting")
   }
-  tab <- x$summary
+  tab <- x$estimates
   finite <- is.finite(tab$att) & is.finite(tab$validation_rmse)
   limit <- x$metadata$validation_max_rmse
   graphics::plot(tab$validation_rmse[finite], tab$att[finite],
@@ -92,8 +92,8 @@ plot.synth_sensitivity <- function(x,
       labels = tab$spec_id[finite], pos = rep(c(3, 1), length.out = sum(finite))
     )
   }
-  graphics::abline(h = 0, col = "grey")
-  if (!is.null(limit)) graphics::abline(v = limit, col = "grey", lty = 2)
+  graphics::abline(h = 0, col = "gray")
+  if (!is.null(limit)) graphics::abline(v = limit, col = "gray", lty = 2)
   if (any(!finite)) {
     graphics::mtext(paste(
       "ATT or validation unavailable:",

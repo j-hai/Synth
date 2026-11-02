@@ -45,6 +45,8 @@ summary(res)
 res$failures
 ```
 
+`res$estimates`, also returned by `as.data.frame(res)`, has one row per design.
+`summary(res)` describes dispersion across those estimates.
 Each ATT is the mean observed-minus-synthetic gap over 1989--2000. `pre_rmse`
 uses all observed pre-treatment periods for every specification; `fit_rmse`
 uses its own fitting periods. The intentionally invalid design illustrates

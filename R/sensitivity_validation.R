@@ -30,10 +30,8 @@
   windows[order(vapply(windows, min, numeric(1)))]
 }
 
-.sensitivity_validate <- function(
-  panel, registry, specifications, windows, times, unit_col, time_col,
-  period_fields, special_field, plot_field, interface, synth_args,
-  excluded_donors, check_design) {
+.sensitivity_validate <- function(panel, registry, specifications, windows,
+                                  context, check_design) {
   rows <- list()
   paths <- data.frame(
     spec_id = character(), fold_id = character(), time = numeric(),
@@ -48,104 +46,69 @@
     message = character()
   )
   configurations <- fits <- prepared <- list()
+  layout <- context$layout
   for (name in names(registry)) {
     configurations[[name]] <- fits[[name]] <- prepared[[name]] <- list()
     for (number in seq_along(windows)) {
       window <- windows[[number]]
       fold <- paste0("fold_", number)
-      train <- times[times < min(window)]
-      cfg <- registry[[name]]
+      train <- context$times[context$times < min(window)]
+      fold_context <- context
+      fold_context$times <- c(train, window)
+      fold_context$treatment_time <- min(window)
       row <- data.frame(
         spec_id = name, fold_id = fold, rmse = NA_real_,
         n_train = length(train), n_validation = length(window),
-        status = "failed",
-        exception_type = NA_character_, message = NA_character_
+        status = "failed", exception_type = NA_character_,
+        message = NA_character_
       )
-      fit_warnings <- character()
-      result <- NULL
-      error <- tryCatch(withCallingHandlers(
-        {
+      output <- .sensitivity_fit(
+        panel[
+          panel[[context$time_col]] %in% fold_context$times, , drop = FALSE
+        ],
+        registry[[name]], fold_context,
+        configure = function(cfg) {
           check_design(cfg, specifications[[name]], name)
-          for (field in period_fields) {
+          .sensitivity_periods(cfg, context)
+          for (field in layout$periods) {
             cfg[[field]] <- cfg[[field]][cfg[[field]] < min(window)]
           }
-          if (length(cfg[[special_field]])) {
-            cfg[[special_field]] <- lapply(
-              cfg[[special_field]], function(special) {
+          if (length(cfg[[layout$special]])) {
+            cfg[[layout$special]] <- lapply(
+              cfg[[layout$special]], function(special) {
                 special[[2]] <- special[[2]][special[[2]] < min(window)]
                 special
               }
             )
           }
-          cfg[[plot_field]] <- c(train, window)
-          if (interface == "synth_data") {
-            if (is.null(cfg$controls)) {
-              treated <- cfg$treated
-              if (!is.numeric(treated)) {
-                index <- match(treated, panel[[cfg$unit_names_col]])
-                treated <- panel[[unit_col]][index]
-              }
-              cfg$controls <- setdiff(unique(panel[[unit_col]]), treated)
-            }
-            cfg$treatment_time <- min(window)
-          }
-          fold_panel <- panel[
-            panel[[time_col]] %in% c(train, window), , drop = FALSE
-          ]
-          result <- synth_sensitivity(
-            fold_panel, cfg, list(), window,
-            synth_args = synth_args,
-            excluded_donors = intersect(
-              excluded_donors, unique(fold_panel[[unit_col]])
-            ),
-            interface = interface, treatment_time = min(window)
-          )
-          row$status <- result$summary$status
-          if (row$status == "failed") {
-            row$exception_type <- result$failures$exception_type
-            row$message <- result$failures$message
-          } else {
-            predicted <- result$paths[
-              result$paths$time %in% window, , drop = FALSE
-            ]
-            predicted$spec_id <- name
-            predicted$fold_id <- fold
-            paths <- rbind(paths, predicted[names(paths)])
-            row$rmse <- .sensitivity_rms(predicted$gap)
-            donor_weights <- result$weights
-            donor_weights$spec_id <- name
-            donor_weights$fold_id <- fold
-            weights <- rbind(weights, donor_weights[names(weights)])
-            fits[[name]][[fold]] <- result$fits$baseline
-            prepared[[name]][[fold]] <- result$prepared$baseline
-          }
-          NULL
+          cfg[[layout$plot]] <- fold_context$times
+          layout$forecast(panel, cfg, min(window))
         },
-        warning = function(w) {
-          fit_warnings <<- c(fit_warnings, conditionMessage(w))
-          invokeRestart("muffleWarning")
+        summarize = function(gap, fit_periods) {
+          list(rmse = .sensitivity_rms(gap[match(window, fold_context$times)]))
         }
-      ), error = identity)
-      if (inherits(error, "error")) {
-        row$status <- "failed"
-        row$rmse <- NA_real_
-        row$exception_type <- class(error)[1]
-        row$message <- conditionMessage(error)
+      )
+      row$status <- output$status
+      if (output$status == "failed") {
+        row$exception_type <- output$exception_type
+        row$message <- output$message
+      } else {
+        row$rmse <- output$statistics$rmse
+        predicted <- output$paths[output$paths$time %in% window, , drop = FALSE]
+        paths <- rbind(paths, cbind(spec_id = name, fold_id = fold, predicted))
+        weights <- rbind(weights, cbind(
+          spec_id = name, fold_id = fold, output$weights
+        ))
+        fits[[name]][[fold]] <- output$fit
+        prepared[[name]][[fold]] <- output$prepared
       }
-      if (!is.null(result) && nrow(result$warnings)) {
-        logged <- result$warnings
-        logged$spec_id <- name
-        logged$fold_id <- fold
-        warning_log <- rbind(warning_log, logged[names(warning_log)])
-      }
-      if (length(fit_warnings)) {
+      if (length(output$warnings)) {
         warning_log <- rbind(warning_log, data.frame(
           spec_id = name, fold_id = fold, warning_type = "warning",
-          message = fit_warnings
+          message = output$warnings
         ))
-        if (row$status == "ok") row$status <- "warning"
       }
-      configurations[[name]][[fold]] <- cfg
+      configurations[[name]][[fold]] <- output$config
       rows[[length(rows) + 1]] <- row
     }
   }

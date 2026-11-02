@@ -18,9 +18,9 @@ test_that("validation matches manual training and preserves policy estimates", {
   expect_equal(res$validation_paths$synthetic, expected)
   error <- as.numeric(dp$Y1plot) - expected
   expect_equal(res$validation$rmse, sqrt(mean(error^2)))
-  expect_equal(res$summary$validation_rmse, res$validation$rmse)
+  expect_equal(res$estimates$validation_rmse, res$validation$rmse)
   full <- synth_sensitivity(smoking, sensitivity_baseline(), list(), 1989:2000)
-  expect_equal(res$summary[names(full$summary)], full$summary)
+  expect_equal(res$estimates[names(full$estimates)], full$estimates)
   expect_equal(res$weights, full$weights)
   expect_equal(res$paths, full$paths)
   expect_equal(res$metadata$treatment_time, 1989)
@@ -53,7 +53,7 @@ test_that("post-treatment missingness cannot affect validation", {
   expect_equal(ref$validation, changed$validation)
   expect_equal(ref$validation_paths, changed$validation_paths)
   expect_equal(ref$validation_weights, changed$validation_weights)
-  expect_equal(changed$summary$status, "failed")
+  expect_equal(changed$estimates$status, "failed")
 })
 
 test_that("rolling folds pool errors and retain incomplete designs", {
@@ -66,12 +66,12 @@ test_that("rolling folds pool errors and retain incomplete designs", {
   ), 1989:2000, validation_windows = list(1984:1985, 1987:1988))
   expect_equal(nrow(res$validation), 6)
   paths <- subset(res$validation_paths, spec_id == "baseline")
-  expect_equal(res$summary$validation_rmse[1], sqrt(mean(paths$gap^2)))
+  expect_equal(res$estimates$validation_rmse[1], sqrt(mean(paths$gap^2)))
   expect_equal(
     subset(res$validation, spec_id == "lag")$status, c("failed", "ok")
   )
-  expect_true(all(is.na(res$summary$validation_rmse[2:3])))
-  expect_true(is.finite(res$summary$att[2]))
+  expect_true(all(is.na(res$estimates$validation_rmse[2:3])))
+  expect_true(is.finite(res$estimates$att[2]))
   failed <- subset(res$validation, status == "failed")
   expect_equal(nrow(failed), 3)
   expect_true(all(nzchar(failed$message)))
@@ -111,7 +111,7 @@ test_that("missing validation observations fail without shortening scoring", {
   smoking$cigsale[smoking$state_id == 1 & smoking$year == 1985] <- NA_real_
   res <- validation_study(smoking)
   expect_equal(res$validation$status, "failed")
-  expect_true(is.na(res$summary$validation_rmse))
+  expect_true(is.na(res$estimates$validation_rmse))
   expect_equal(res$validation$n_validation, 5)
 })
 
@@ -130,11 +130,11 @@ test_that("excluded units outside fold time do not invalidate clean pools", {
 test_that("a declared threshold flags a subset without dropping attempts", {
   data(smoking)
   res <- validation_study(smoking, validation_max_rmse = 0)
-  expect_false(res$summary$validation_pass)
+  expect_false(res$estimates$validation_pass)
   expect_equal(summary(res)$attempted, 1)
   expect_equal(summary(res, validation_only = TRUE)$attempted, 0)
   res <- validation_study(smoking, validation_max_rmse = 1000)
-  expect_true(res$summary$validation_pass)
+  expect_true(res$estimates$validation_pass)
   expect_equal(summary(res, validation_only = TRUE)$attempted, 1)
   expect_error(
     summary(validation_study(smoking), validation_only = TRUE),
@@ -178,7 +178,7 @@ test_that("legacy configurations validate without changing the policy date", {
     validation_windows = list(1984:1988)
   )
   expect_equal(without_special$validation$status, "ok")
-  expect_true(is.finite(without_special$summary$validation_rmse))
+  expect_true(is.finite(without_special$estimates$validation_rmse))
 })
 
 test_that("default pools and named treated units keep the original donors", {
@@ -215,10 +215,10 @@ test_that("fold warnings keep scores and preserve final-fit status", {
     .package = "Synth"
   )
   res <- validation_study(smoking)
-  expect_equal(res$summary$status, "ok")
+  expect_equal(res$estimates$status, "ok")
   expect_equal(res$validation$status, "warning")
-  expect_equal(res$summary$validation_status, "warning")
-  expect_true(is.finite(res$summary$validation_rmse))
+  expect_equal(res$estimates$validation_status, "warning")
+  expect_true(is.finite(res$estimates$validation_rmse))
   expect_match(res$validation_warnings$message, "validation fit diagnostic")
 })
 
