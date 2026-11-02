@@ -1,0 +1,103 @@
+---
+title: "Sensitivity to synthetic control design choices"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Sensitivity to synthetic control design choices}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4)
+library(Synth)
+```
+
+A synthetic control estimate depends on the donor pool, matching predictors
+and fitting periods. `synth_sensitivity()` refits `synth()` independently for a
+declared set of designs, holding the treated unit, outcome, treatment date,
+solver settings and ATT evaluation periods fixed.
+
+Declare the designs before inspecting effects. These examples illustrate the
+interface and do not establish that every design is equally credible.
+Researchers must exclude known treated or contaminated donors and ensure that
+precomputed predictor columns contain no future information. Calendar checks
+cannot establish no anticipation, no spillovers or a stable untreated outcome
+relationship after treatment.
+
+```{r study}
+data(smoking)
+baseline <- list(
+  outcome = "cigsale", unit_col = "state_id", time_col = "year",
+  treated = 3, treatment_time = 1989,
+  predictors = c("lnincome", "age15to24", "retprice", "beer"),
+  pre_periods = 1980:1988,
+  special_predictors = list(list("cigsale", c(1975, 1980, 1988), "mean"))
+)
+specifications <- list(
+  baseline = list(),
+  short_pre = list(pre_periods = 1984:1988),
+  outcomes_only = list(predictors = NULL),
+  invalid_window = list(pre_periods = 1980:1990)
+)
+res <- synth_sensitivity(smoking, baseline, specifications, att_periods = 1989:2000)
+as.data.frame(res)
+summary(res)
+res$failures
+```
+
+Each ATT is the mean observed-minus-synthetic gap over 1989--2000. `pre_rmse`
+uses all observed pre-treatment periods for every specification; `fit_rmse`
+uses its own fitting periods. The intentionally invalid design illustrates
+failure retention. There is no automatic removal based on fit or effect size.
+Warnings, including nonconvergence, are stored in `res$warnings`; finite
+estimates from warning-bearing fits remain in the tables and plots.
+
+```{r curve}
+plot(res)
+```
+
+The curve shows every attempt. Failures have labels and no assigned effect
+value; crosses identify fits with warnings. `summary(res)` reports attempted
+and failed counts alongside the dispersion of finite estimates. Sign shares
+describe the registered designs, not the probability of a causal effect.
+The spread across designs is not a confidence interval.
+
+```{r paths}
+plot(res, type = "paths")
+head(res$weights)
+head(res$paths)
+```
+
+`res$registry` preserves each merged configuration; `res$baseline` preserves
+the original baseline. `res$metadata` records the common periods, exclusions,
+package version and resolved solver arguments. Native fits and preparation
+objects remain in `res$fits` and `res$prepared`, including predictor weights
+and optimizer output. Save the result with `saveRDS()` alongside the original
+panel and the code declaring the registry.
+
+For the older interface, use `interface = "dataprep"`, specify
+`treatment_time` separately, and use `dataprep()` argument names. This permits
+independent predictor-aggregation and outcome-fitting windows, plus arbitrary
+special-predictor windows. Entries may be complete configurations with unchanged
+study fields or just design overrides:
+
+```{r advanced}
+legacy <- list(
+  dependent = "cigsale", unit.variable = "state_id", time.variable = "year",
+  treatment.identifier = 3, controls.identifier = c(1, 2, 4, 5),
+  predictors = "retprice", predictors.op = "mean",
+  time.predictors.prior = 1980:1988, time.optimize.ssr = 1970:1988,
+  special.predictors = list(list("cigsale", c(1975, 1980, 1988), "mean"))
+)
+advanced <- synth_sensitivity(
+  smoking, legacy,
+  list(late_fit = list(time.optimize.ssr = 1980:1988)),
+  att_periods = 1989:2000, interface = "dataprep", treatment_time = 1989
+)
+as.data.frame(advanced)
+```
+
+This initial interface supports deterministic `ipop` fits. Pre-treatment
+holdout validation and other solver backends need separate checks before being
+added. Existing placebo inference remains a separate analysis: it changes the
+putatively treated unit, while this registry changes its research design.

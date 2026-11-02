@@ -44,6 +44,9 @@ function(H, c_vec, pars)
                         sigf   = pars$sigf   %||% 5,
                         bound  = pars$bound  %||% 10,
                         maxiter = pars$maxiter %||% 1000)
+    status <- kernlab::how(res)
+    if (!identical(status, "converged"))
+      warning(sprintf("Donor-weight optimization did not converge: %s", status))
     as.matrix(kernlab::primal(res))
   }
 
