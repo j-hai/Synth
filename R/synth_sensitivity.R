@@ -210,10 +210,16 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
         if (!all(is.finite(gap))) {
           stop("Estimator returned a nonfinite trajectory")
         }
-        row$att <- mean(gap[match(att_periods, times)])
-        row$pre_rmse <- sqrt(mean(gap[match(pre, times)]^2))
         fit_periods <- match(dp$tag$time.optimize.ssr, times)
-        row$fit_rmse <- sqrt(mean(gap[fit_periods]^2))
+        statistics <- list(
+          att = mean(gap[match(att_periods, times)]),
+          pre_rmse = .sensitivity_rms(gap[match(pre, times)]),
+          fit_rmse = .sensitivity_rms(gap[fit_periods])
+        )
+        if (!all(is.finite(unlist(statistics)))) {
+          stop("Estimator returned nonfinite summary statistics")
+        }
+        row[names(statistics)] <- statistics
         list(
           row = row, fit = fit, dp = dp,
           paths = data.frame(
@@ -269,6 +275,20 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
   )
 }
 
+.sensitivity_rms <- function(values) {
+  scale <- max(abs(values))
+  if (scale == 0) return(0)
+  scale * sqrt(mean((values / scale)^2))
+}
+
+.sensitivity_sd <- function(values) {
+  if (length(values) < 2) return(NA_real_)
+  scale <- max(abs(values))
+  if (scale == 0) return(0)
+  value <- scale * stats::sd(values / scale)
+  if (is.finite(value)) value else NA_real_
+}
+
 summary.synth_sensitivity <- function(object, ...) {
   effects <- object$summary$att[is.finite(object$summary$att)]
   data.frame(
@@ -278,7 +298,7 @@ summary.synth_sensitivity <- function(object, ...) {
     min = if (length(effects)) min(effects) else NA_real_,
     median = if (length(effects)) stats::median(effects) else NA_real_,
     max = if (length(effects)) max(effects) else NA_real_,
-    std = stats::sd(effects),
+    std = .sensitivity_sd(effects),
     positive_share = if (length(effects)) mean(effects > 0) else NA_real_,
     negative_share = if (length(effects)) mean(effects < 0) else NA_real_,
     zero_share = if (length(effects)) mean(effects == 0) else NA_real_

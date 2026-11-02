@@ -122,12 +122,43 @@ test_that("study and registry errors are distinguished from failed designs", {
 test_that("post-treatment outcomes never affect fitted weights", {
   data(smoking)
   ref <- synth_sensitivity(smoking, sensitivity_baseline(), list(), 1989:2000)
-  post <- smoking$year >= 1989
+  post <- smoking$year >= 1989 & smoking$state_id == 3
   smoking$cigsale[post] <- smoking$cigsale[post] + 1000
   changed <- synth_sensitivity(
     smoking, sensitivity_baseline(), list(), 1989:2000
   )
   expect_equal(ref$weights, changed$weights)
+  expect_equal(changed$summary$att - ref$summary$att, 1000)
+})
+
+test_that("custom predictor weights cannot move to different matching variables", {
+  data(smoking)
+  res <- synth_sensitivity(smoking, sensitivity_baseline(), list(
+    predictor = list(predictors = "beer"),
+    special = list(special_predictors = list(list("cigsale", 1980, "mean"))),
+    window = list(pre_periods = 1984:1988)
+  ), 1989:2000, synth_args = list(custom.v = c(0.9, 0.1)))
+  expect_equal(res$failures$spec_id, c("predictor", "special"))
+  expect_true(all(grepl("custom.v", res$failures$message, fixed = TRUE)))
+  expect_true(all(is.finite(res$summary$att[c(1, 4)])))
+})
+
+test_that("unknown exclusions and nondeterministic solver settings fail early", {
+  data(smoking)
+  baseline <- sensitivity_baseline()
+  expect_error(synth_sensitivity(smoking, baseline, list(), 1989:2000,
+    excluded_donors = 999
+  ), "excluded_donors")
+  for (genoud in list(TRUE, 1, "TRUE", NULL, c(FALSE, FALSE))) {
+    expect_error(synth_sensitivity(smoking, baseline, list(), 1989:2000,
+      synth_args = list(genoud = genoud)
+    ), "genoud")
+  }
+  for (quadopt in list(NULL, character(), NA_character_, c("ipop", "ipop"))) {
+    expect_error(synth_sensitivity(smoking, baseline, list(), 1989:2000,
+      synth_args = list(quadopt = quadopt)
+    ), "quadopt")
+  }
 })
 
 test_that("both plot types handle all failures and mixed results", {
@@ -233,4 +264,69 @@ test_that("omitted pre-periods use all observed pretreatment periods", {
   res <- synth_sensitivity(smoking, baseline, list(), 1989:2000)
   expect_equal(res$registry$baseline$pre_periods, 1970:1988)
   expect_true(is.finite(res$summary$att))
+})
+
+test_that("large finite pre-period gaps retain finite RMS summaries", {
+  data(smoking)
+  smoking$cigsale[smoking$state_id == 3 & smoking$year == 1970] <- 1e200
+  res <- synth_sensitivity(smoking, sensitivity_baseline(), list(), 1989:2000)
+  expect_equal(nrow(res$failures), 0)
+  expect_equal(res$summary$pre_rmse / 1e200, 1 / sqrt(19))
+  expect_true(is.finite(res$summary$fit_rmse))
+})
+
+test_that("large finite post-treatment gaps retain finite ATT", {
+  data(smoking)
+  smoking$cigsale[smoking$year >= 1989] <- 0
+  cases <- list(
+    list(gaps = rep(1e308, 12), expected = 1e308),
+    list(gaps = rep(c(1e308, 1e308, -1e308, -1e308), 3), expected = 0),
+    list(gaps = rep(0, 12), expected = 0),
+    list(gaps = rep(1e-200, 12), expected = 1e-200)
+  )
+  for (case in cases) {
+    smoking$cigsale[smoking$state_id == 3 & smoking$year >= 1989] <- case$gaps
+    res <- synth_sensitivity(smoking, sensitivity_baseline(), list(), 1989:2000)
+    expect_equal(nrow(res$failures), 0)
+    if (case$expected == 0) {
+      expect_equal(res$summary$att, 0)
+    } else {
+      expect_equal(res$summary$att / case$expected, 1)
+    }
+    expect_equal(summary(res)$estimated, 1)
+  }
+})
+
+test_that("RMS is stable across scales and nonfinite summaries fail", {
+  scales <- c(
+    0, .Machine$double.xmin * .Machine$double.eps, 1e-200, 1e200, 1e308
+  )
+  for (scale in scales) {
+    expect_equal(Synth:::.sensitivity_rms(c(scale, -scale)), scale)
+  }
+  expect_equal(Synth:::.sensitivity_rms(c(3e200, 4e200)) / 1e200, sqrt(12.5))
+  data(smoking)
+  testthat::local_mocked_bindings(
+    .sensitivity_rms = function(values) Inf, .package = "Synth"
+  )
+  res <- synth_sensitivity(smoking, sensitivity_baseline(), list(), 1989:2000)
+  expect_equal(res$summary$status, "failed")
+  expect_true(all(is.na(res$summary[c("att", "pre_rmse", "fit_rmse")])))
+  expect_equal(nrow(res$paths), 0)
+  expect_match(res$failures$message, "nonfinite summary")
+})
+
+test_that("dispersion is stable and excludes nonfinite estimates", {
+  object <- structure(list(summary = data.frame(
+    att = c(1e308, 1e308, Inf, -Inf, NA_real_), status = rep("ok", 5)
+  )), class = "synth_sensitivity")
+  stats <- summary(object)
+  expect_equal(stats$estimated, 2)
+  expect_equal(stats$positive_share, 1)
+  expect_equal(stats$median, 1e308)
+  expect_equal(stats$std, 0)
+  object$summary$att <- c(1e200, -1e200, NA, NA, NA)
+  expect_equal(summary(object)$std / 1e200, sqrt(2))
+  object$summary$att <- c(1.7e308, -1.7e308, NA, NA, NA)
+  expect_true(is.na(summary(object)$std))
 })

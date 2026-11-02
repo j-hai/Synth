@@ -68,11 +68,18 @@ and marks fits with warnings using crosses.
 
 \code{summary()} describes finite estimates, including warning-bearing fits,
 and reports attempted, estimated, failed and warning counts. Sign shares use the
-number of finite estimates as their denominator. They are descriptive shares
+number of finite estimates as their denominator. Standard deviation is missing
+when fewer than two estimates are finite or its value exceeds the floating-point
+range. These are descriptive shares
 among registered designs, not causal probabilities. Their dispersion does not
 form a confidence interval. This varies designs for the original treated unit;
 it is separate from in-space placebo inference. Pre-treatment holdout validation
 is not part of this interface.
+
+RMS summaries are scaled before squaring to avoid intermediate overflow.
+ATT uses base R's \code{mean}; cancellation among extreme mixed-sign gaps can
+lose small residuals at floating-point precision. Nonfinite aggregate summaries
+are logged as failed designs.
 }
 \value{
 \code{synth_sensitivity()} returns an S3 object with:
