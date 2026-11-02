@@ -35,18 +35,19 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
     stop("synth_args may only contain fixed solver settings")
   }
   defaults <- lapply(
-    formals(synth)[permitted], eval, envir = environment(synth)
+    formals(synth)[permitted], eval,
+    envir = environment(synth)
   )
   defaults[names(synth_args)] <- synth_args
   synth_args <- defaults
   # Random search needs an explicit per-fit RNG contract in a later interface.
-  if (isTRUE(synth_args$genoud)) {
+  if (!identical(synth_args$genoud, FALSE)) {
     stop("genoud is not supported by this deterministic runner")
   }
-  if (any(c(
-    synth_args$quadopt, synth_args$quadopt_inner,
-    synth_args$quadopt_outer
-  ) != "ipop")) {
+  if (!identical(synth_args$quadopt, "ipop") || any(vapply(
+    synth_args[c("quadopt_inner", "quadopt_outer")],
+    function(x) !is.null(x) && !identical(x, "ipop"), logical(1)
+  ))) {
     stop("The initial sensitivity interface supports quadopt = 'ipop' only")
   }
 
@@ -63,6 +64,9 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
   identifiers <- panel[c(unit_col, time_col)]
   if (anyNA(identifiers) || anyDuplicated(identifiers)) {
     stop("Unit/time pairs must be nonmissing and unique")
+  }
+  if (any(!excluded_donors %in% panel[[unit_col]])) {
+    stop("excluded_donors contains unit ids absent from the panel")
   }
   times <- sort(unique(panel[[time_col]]))
   pre <- times[times < treatment_time]
@@ -166,6 +170,10 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
         if (name == "baseline" && length(overrides)) {
           stop("The baseline cannot contain overrides")
         }
+        if (!is.null(synth_args$custom.v) &&
+              any(c("predictors", special_field) %in% names(overrides))) {
+          stop("custom.v requires fixed predictors and special predictors")
+        }
         for (field in period_fields) check_periods(cfg[[field]], field)
         for (special in cfg[[special_field]]) {
           if (length(special) != 3) {
@@ -197,7 +205,15 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
         optimizer <- if (is.list(fit$rgV.optim)) fit$rgV.optim$out.list
         if (!is.null(optimizer) && !is.null(optimizer$convcode) &&
               any(optimizer$convcode != 0, na.rm = TRUE)) {
-          warning("At least one predictor-weight optimization did not converge")
+          selected <- if (isTRUE(optimizer$convcode[1] == 0)) {
+            "converged"
+          } else {
+            "was not confirmed converged"
+          }
+          warning(paste(
+            "Predictor-weight search included nonconverged candidates;",
+            "the selected candidate", selected
+          ))
         }
         donor_order <- match(colnames(dp$Y0plot), rownames(fit$solution.w))
         w <- fit$solution.w[donor_order, 1]
@@ -277,14 +293,20 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
 
 .sensitivity_rms <- function(values) {
   scale <- max(abs(values))
-  if (scale == 0) return(0)
+  if (scale == 0) {
+    return(0)
+  }
   scale * sqrt(mean((values / scale)^2))
 }
 
 .sensitivity_sd <- function(values) {
-  if (length(values) < 2) return(NA_real_)
+  if (length(values) < 2) {
+    return(NA_real_)
+  }
   scale <- max(abs(values))
-  if (scale == 0) return(0)
+  if (scale == 0) {
+    return(0)
+  }
   value <- scale * stats::sd(values / scale)
   if (is.finite(value)) value else NA_real_
 }

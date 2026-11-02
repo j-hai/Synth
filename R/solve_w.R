@@ -16,10 +16,11 @@ function(H, c_vec,
          ipop_pars = list(margin = 0.0005, sigf = 5, bound = 10, maxiter = 1000),
          cvxr_pars = list(solver = "CLARABEL", eps = 1e-8, max_iter = 5000),
          torch_pars = list(max_iter = 500, tol = 1e-8,
-                           device = "cpu", dtype = "float64"))
+                           device = "cpu", dtype = "float64"),
+         warning_context = NULL)
   {
     if (quadopt == "ipop") {
-      return(.solve_w_ipop(H, c_vec, ipop_pars))
+      return(.solve_w_ipop(H, c_vec, ipop_pars, warning_context))
     } else if (quadopt == "cvxr") {
       return(.solve_w_cvxr(H, c_vec, cvxr_pars))
     } else if (quadopt == "torch") {
@@ -34,7 +35,7 @@ function(H, c_vec,
   }
 
 .solve_w_ipop <-
-function(H, c_vec, pars)
+function(H, c_vec, pars, warning_context = NULL)
   {
     n <- length(c_vec)
     A <- t(rep(1, n))
@@ -45,8 +46,12 @@ function(H, c_vec, pars)
                         bound  = pars$bound  %||% 10,
                         maxiter = pars$maxiter %||% 1000)
     status <- kernlab::how(res)
-    if (!identical(status, "converged"))
-      warning(sprintf("Donor-weight optimization did not converge: %s", status))
+    if (!identical(status, "converged")) {
+      context <- if (is.null(warning_context)) "" else
+        sprintf(" (%s)", warning_context)
+      warning(sprintf("Donor-weight optimization%s did not converge: %s",
+                      context, status))
+    }
     as.matrix(kernlab::primal(res))
   }
 

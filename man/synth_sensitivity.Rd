@@ -37,9 +37,12 @@ also supply full configurations, provided all fixed fields match the baseline.}
 fixed for all specifications.}
 \item{synth_args}{Named list of fixed solver options passed to \code{synth()}.
 Matrix inputs cannot be overridden. The initial interface supports deterministic
-\code{ipop} fits only; \code{genoud = TRUE} is not supported.}
+\code{ipop} fits only; \code{genoud} must be \code{FALSE}. With
+\code{custom.v}, designs overriding regular or special predictors fail to
+prevent positional weights from being assigned to different matching variables.}
 \item{excluded_donors}{Numeric unit identifiers for known treated or
-contaminated donors. A design containing one fails.}
+contaminated donors. Unknown IDs raise before fitting. A design containing
+an excluded donor fails.}
 \item{interface}{Preparation function whose argument names to use.}
 \item{treatment_time}{First treated period. Defaults to the baseline's value
 for \code{synth_data}; required for \code{dataprep}.}
@@ -65,6 +68,14 @@ remain accessible. Finite estimates from such fits are retained. Failed designs
 have missing estimates and a separate exception log. The default specification
 curve displays every attempt, labels failures without assigning an effect value,
 and marks fits with warnings using crosses.
+Warnings can arise from candidate solves during predictor-weight search even
+when the selected solution converges. Search warnings report the selected
+candidate's convergence separately; the selected starting point's optimizer
+table remains in \code{fits}. Donor optimization warnings identify search trials
+and the final weight solve separately. A warning status records a computational
+diagnostic, not a claim
+that the selected solution failed. Native \code{synth()} fits also emit donor
+optimization warnings, including during candidate search.
 
 \code{summary()} describes finite estimates, including warning-bearing fits,
 and reports attempted, estimated, failed and warning counts. Sign shares use the

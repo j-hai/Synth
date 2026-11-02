@@ -38,7 +38,8 @@ function(
       ipop_pars  = list(margin = margin.ipop, sigf = sigf.ipop,
                         bound  = bound.ipop,  maxiter = 1000),
       cvxr_pars  = cvxr_pars,
-      torch_pars = torch_pars
+      torch_pars = torch_pars,
+      warning_context = "predictor-weight search"
     )
 
     # compute losses

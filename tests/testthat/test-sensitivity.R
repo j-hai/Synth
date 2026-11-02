@@ -131,7 +131,7 @@ test_that("post-treatment outcomes never affect fitted weights", {
   expect_equal(changed$summary$att - ref$summary$att, 1000)
 })
 
-test_that("custom predictor weights cannot move to different matching variables", {
+test_that("custom weights cannot move to different matching variables", {
   data(smoking)
   res <- synth_sensitivity(smoking, sensitivity_baseline(), list(
     predictor = list(predictors = "beer"),
@@ -143,21 +143,27 @@ test_that("custom predictor weights cannot move to different matching variables"
   expect_true(all(is.finite(res$summary$att[c(1, 4)])))
 })
 
-test_that("unknown exclusions and nondeterministic solver settings fail early", {
+test_that("unknown exclusions and nondeterministic settings fail early", {
   data(smoking)
   baseline <- sensitivity_baseline()
-  expect_error(synth_sensitivity(smoking, baseline, list(), 1989:2000,
-    excluded_donors = 999
-  ), "excluded_donors")
+  expect_error(
+    synth_sensitivity(smoking, baseline, list(), 1989:2000,
+      excluded_donors = 999
+    ), "excluded_donors"
+  )
   for (genoud in list(TRUE, 1, "TRUE", NULL, c(FALSE, FALSE))) {
-    expect_error(synth_sensitivity(smoking, baseline, list(), 1989:2000,
-      synth_args = list(genoud = genoud)
-    ), "genoud")
+    expect_error(
+      synth_sensitivity(smoking, baseline, list(), 1989:2000,
+        synth_args = list(genoud = genoud)
+      ), "genoud"
+    )
   }
   for (quadopt in list(NULL, character(), NA_character_, c("ipop", "ipop"))) {
-    expect_error(synth_sensitivity(smoking, baseline, list(), 1989:2000,
-      synth_args = list(quadopt = quadopt)
-    ), "quadopt")
+    expect_error(
+      synth_sensitivity(smoking, baseline, list(), 1989:2000,
+        synth_args = list(quadopt = quadopt)
+      ), "quadopt"
+    )
   }
 })
 
@@ -187,9 +193,9 @@ test_that("solver warnings retain finite estimates and diagnostics", {
   data(smoking)
   original <- synth
   testthat::local_mocked_bindings(
-    synth = function(...) {
+    synth = function(..., genoud = FALSE, quadopt = "ipop") {
       warning("solver did not converge")
-      original(...)
+      original(..., genoud = genoud, quadopt = quadopt)
     },
     .package = "Synth"
   )
@@ -200,6 +206,31 @@ test_that("solver warnings retain finite estimates and diagnostics", {
   expect_equal(summary(res)$with_warnings, 1)
 })
 
+test_that("search warnings distinguish selected and unused candidates", {
+  data(smoking)
+  original <- synth
+  for (code in c(0, 1)) {
+    testthat::local_mocked_bindings(
+      synth = function(..., genoud = FALSE, quadopt = "ipop") {
+        fit <- original(..., genoud = genoud, quadopt = quadopt)
+        fit$rgV.optim$out.list <- data.frame(convcode = c(code, 1))
+        fit
+      },
+      .package = "Synth"
+    )
+    res <- synth_sensitivity(smoking, sensitivity_baseline(), list(), 1989:2000)
+    expect_equal(res$summary$status, "warning")
+    expect_match(res$warnings$message, "nonconverged candidates")
+    expect_match(res$warnings$message, if (code == 0) {
+      "selected candidate converged"
+    } else {
+      "selected candidate was not confirmed converged"
+    })
+    expect_equal(res$fits$baseline$rgV.optim$out.list$convcode, c(code, 1))
+    expect_true(is.finite(res$summary$att))
+  }
+})
+
 test_that("ipop nonconvergence is exposed without changing its weights", {
   hessian <- diag(3)
   cvec <- c(-1, -2, -3)
@@ -208,6 +239,33 @@ test_that("ipop nonconvergence is exposed without changing its weights", {
     w <- Synth:::.solve_w_ipop(hessian, cvec, pars), "did not converge"
   )
   expect_true(all(is.finite(w)))
+})
+
+test_that("donor warnings identify search and final solves", {
+  data(smoking)
+  original <- Synth:::.solve_w_ipop
+  for (phase in c("predictor-weight search", "final donor-weight solve")) {
+    warned <- FALSE
+    testthat::local_mocked_bindings(
+      .solve_w_ipop = function(hessian, c_vec, pars, warning_context = NULL) {
+        if (!warned && identical(warning_context, phase)) {
+          pars$maxiter <- 1
+          warned <<- TRUE
+        }
+        original(hessian, c_vec, pars, warning_context = warning_context)
+      },
+      .package = "Synth"
+    )
+    res <- synth_sensitivity(smoking, sensitivity_baseline(), list(), 1989:2000)
+    messages <- res$warnings$message[
+      grepl("Donor-weight", res$warnings$message, fixed = TRUE)
+    ]
+    expect_true(warned)
+    expect_true(length(messages) > 0)
+    expect_true(all(grepl(phase, messages, fixed = TRUE)))
+    expect_equal(res$summary$status, "warning")
+    expect_true(is.finite(res$summary$att))
+  }
 })
 
 test_that("invalid common settings fail before any estimation", {
