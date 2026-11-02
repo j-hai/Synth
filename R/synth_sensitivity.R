@@ -85,7 +85,7 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
   }
 
   base <- baseline
-  if (!is.null(layout$treatment) && is.null(base[[layout$periods]])) {
+  if (interface == "synth_data" && is.null(base[[layout$periods]])) {
     base[[layout$periods]] <- pre
   }
   if (is.null(base[[layout$plot]])) base[[layout$plot]] <- times
@@ -97,7 +97,7 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
     stop("Baseline plotting periods must cover the full observed trajectory")
   }
   context <- list(
-    layout = layout, unit_col = unit_col, time_col = time_col,
+    layout = layout, time_col = time_col,
     times = times, treatment_time = treatment_time,
     synth_args = synth_args, excluded_donors = excluded_donors
   )
