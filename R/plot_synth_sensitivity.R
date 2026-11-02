@@ -20,7 +20,7 @@ plot.synth_sensitivity <- function(x, type = c("specification_curve", "paths"),
     )
     graphics::axis(1, at = seq_len(nrow(tab)), labels = tab$spec_id, las = 2)
     graphics::mtext("Specification", side = 1, line = margins[1] - 1)
-    graphics::abline(h = 0, col = "grey")
+    graphics::abline(h = 0, col = "gray")
     graphics::points(which(finite), tab$att[finite],
       pch = ifelse(tab$status[finite] == "warning", 4, 16)
     )
