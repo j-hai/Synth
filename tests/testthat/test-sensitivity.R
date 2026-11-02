@@ -388,3 +388,18 @@ test_that("dispersion is stable and excludes nonfinite estimates", {
   object$summary$att <- c(1.7e308, -1.7e308, NA, NA, NA)
   expect_true(is.na(summary(object)$std))
 })
+
+test_that("dispersion preserves small spreads at large common levels", {
+  high <- 1e308 * (1 + .Machine$double.eps)
+  cases <- list(
+    list(effects = c(1e308, high), expected = (high - 1e308) / sqrt(2)),
+    list(effects = c(2, 4), expected = sqrt(2)),
+    list(effects = c(1e308, -1e308), expected = sqrt(2) * 1e308)
+  )
+  for (case in cases) {
+    object <- structure(list(summary = data.frame(
+      att = case$effects, status = c("ok", "ok")
+    )), class = "synth_sensitivity")
+    expect_equal(summary(object)$std / case$expected, 1)
+  }
+})

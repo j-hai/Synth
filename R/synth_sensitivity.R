@@ -303,6 +303,11 @@ synth_sensitivity <- function(panel, baseline, specifications, att_periods,
   if (length(values) < 2) {
     return(NA_real_)
   }
+  # Remove the common level before scaling to preserve small differences.
+  shifted <- values - values[1]
+  if (all(is.finite(shifted))) {
+    values <- shifted
+  }
   scale <- max(abs(values))
   if (scale == 0) {
     return(0)
