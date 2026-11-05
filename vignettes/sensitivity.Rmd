@@ -122,7 +122,9 @@ summary(validated, validation_only = TRUE)
 
 The cutoff of 20 cigarette packs per capita illustrates the interface; it is not a
 recommended threshold. `short_pre` has no fitting observations before 1984,
-so its validation fails while its final policy fit remains available. No results
+so its validation fails while its final policy fit remains available. The
+baseline fails validation for a different reason: `beer` is unobserved before
+1984, so that predictor has no data in the training window. No results
 are removed. `summary(validated)` describes the full registry;
 `validation_only = TRUE` describes the subset passing the declared cutoff.
 

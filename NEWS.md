@@ -5,6 +5,10 @@
 * `synth_sensitivity()` independently refits a prespecified design registry,
   retaining complete trajectories, weights, warnings and failures. Its S3
   methods summarize descriptive dispersion and plot every attempted design.
+* `synth_sensitivity()` gains `validation_windows` and `validation_max_rmse`
+  for pre-treatment holdout and rolling-origin validation of each design.
+  `plot(type = "validation")` and `summary(validation_only = TRUE)` report
+  the results; policy estimates are unchanged.
 * Donor optimization now emits a warning when `ipop` does not converge. This
   also applies to native `synth()` calls and candidate solves during predictor
   search; a search warning does not necessarily mean the final fit failed.
