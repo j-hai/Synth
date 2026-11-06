@@ -1,5 +1,14 @@
 # Synth 1.2-0
 
+## Specification sensitivity
+
+* `synth_sensitivity()` independently refits a prespecified design registry,
+  retaining complete trajectories, weights, warnings and failures. Its S3
+  methods summarize descriptive dispersion and plot every attempted design.
+* Donor optimization now emits a warning when `ipop` does not converge. This
+  also applies to native `synth()` calls and candidate solves during predictor
+  search; a search warning does not necessarily mean the final fit failed.
+
 ## Bug fixes (vs the unreleased 1.2-0 RC1 from earlier in this development cycle)
 
 * `synth_inference()` and `synth_placebos()` (then called
