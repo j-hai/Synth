@@ -1,0 +1,35 @@
+test_that("estimates and dispersion have distinct public names", {
+  data(smoking)
+  baseline <- sensitivity_baseline()
+  res <- synth_sensitivity(smoking, baseline, list(), 1989:2000)
+  expect_s3_class(res$estimates, "data.frame")
+  expect_false("summary" %in% names(res))
+  expect_identical(as.data.frame(res), res$estimates)
+  expect_equal(summary(res)$attempted, nrow(res$estimates))
+})
+
+test_that("att_periods selects the averaged post-treatment periods", {
+  data(smoking)
+  baseline <- sensitivity_baseline()
+  dp <- do.call(synth_data, c(list(panel = smoking), baseline))
+  gap <- as.numeric(dp$Y1plot - dp$Y0plot %*% synth(dp)$solution.w)
+  periods <- c(1990, 1995, 2000)
+  res <- synth_sensitivity(smoking, baseline, list(), periods)
+  expect_equal(res$estimates$att, mean(gap[rownames(dp$Y1plot) %in% periods]))
+  full <- synth_sensitivity(smoking, baseline, list(), 1989:2000)
+  expect_gt(abs(res$estimates$att - full$estimates$att), 1)
+})
+
+test_that("synth_args reach the fits", {
+  data(smoking)
+  baseline <- sensitivity_baseline()
+  dp <- do.call(synth_data, c(list(panel = smoking), baseline))
+  fit <- synth(dp, custom.v = c(0.9, 0.1))
+  res <- synth_sensitivity(smoking, baseline, list(), 1989:2000,
+    synth_args = list(custom.v = c(0.9, 0.1))
+  )
+  expect_equal(as.numeric(res$fits$baseline$solution.v), c(0.9, 0.1))
+  expect_equal(res$weights$weight, as.numeric(fit$solution.w))
+  default <- synth_sensitivity(smoking, baseline, list(), 1989:2000)
+  expect_gt(max(abs(res$weights$weight - default$weights$weight)), 0.01)
+})

@@ -254,7 +254,8 @@ function(           data.prep.obj = NULL,
       ipop_pars  = list(margin = Margin.ipop, sigf = Sigf.ipop,
                         bound  = Bound.ipop,  maxiter = 1000),
       cvxr_pars  = cvxr_pars_outer,
-      torch_pars = torch_pars_outer
+      torch_pars = torch_pars_outer,
+      warning_context = "final donor-weight solve"
     )
 
     rownames(solution.w) <- colnames(X0)
